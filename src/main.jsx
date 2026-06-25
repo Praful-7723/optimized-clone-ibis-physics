@@ -3,6 +3,7 @@ import { ShamayimToggleSwitch } from "./components/ui/switch";
 import { Badge } from "./components/ui/new-badge";
 import { TimelineContent } from "./components/ui/timeline-animation";
 import { RainbowButton } from "./components/ui/rainbow-button";
+import FaultyTerminal from "./components/ui/FaultyTerminal";
 import { createRoot } from "react-dom/client";
 import {
   ArrowDown,
@@ -16,11 +17,14 @@ import {
   Clipboard,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   FileText,
   Flame,
   Layers3,
   Lock,
   LogOut,
+  Mail,
   Menu,
   Play,
   Plus,
@@ -238,6 +242,7 @@ function App() {
   const [batchOpen, setBatchOpen] = useState(false);
   const [paywall, setPaywall] = useState(false);
   const [access, setAccess] = useState("trial");
+  const [legalPage, setLegalPage] = useState("privacy");
 
   const activeChapter = chapters[chapterIndex] || chapters[0];
 
@@ -333,7 +338,18 @@ function App() {
       )}
 
       {screen === "batches" && <BatchControl onBack={() => setScreen("admin")} />}
-      {screen === "signup" && <Signup onBack={() => setScreen("landing")} onPay={() => setScreen("checkout")} />}
+      {screen === "signup" && (
+        <Signup
+          onBack={() => setScreen("landing")}
+          onPay={() => setScreen("checkout")}
+          onLogin={() => enterPortal("full")}
+          onLegal={(page) => {
+            setLegalPage(page);
+            setScreen("legal");
+          }}
+        />
+      )}
+      {screen === "legal" && <LegalInfoPage page={legalPage} onBack={() => setScreen("signup")} />}
       {screen === "checkout" && <Checkout onBack={() => setScreen("signup")} onDone={() => enterPortal("full")} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} />}
     </main>
@@ -2158,20 +2174,561 @@ function StudentRow({ student, expanded, onClick }) {
   );
 }
 
-function Signup({ onBack, onPay }) {
+function Pupil({ size = 12, maxDistance = 5, pupilColor = "black", forceLookX, forceLookY }) {
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+  const pupilRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      setMouseX(event.clientX);
+      setMouseY(event.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const calculatePupilPosition = () => {
+    if (!pupilRef.current) return { x: 0, y: 0 };
+    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
+
+    const pupil = pupilRef.current.getBoundingClientRect();
+    const pupilCenterX = pupil.left + pupil.width / 2;
+    const pupilCenterY = pupil.top + pupil.height / 2;
+    const deltaX = mouseX - pupilCenterX;
+    const deltaY = mouseY - pupilCenterY;
+    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+    const angle = Math.atan2(deltaY, deltaX);
+
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance
+    };
+  };
+
+  const pupilPosition = calculatePupilPosition();
+
   return (
-    <section className="center-flow">
-      <form className="auth-card" onSubmit={(event) => { event.preventDefault(); onPay(); }}>
-        <Button type="button" className="icon-btn" aria-label="Back" onClick={onBack}><ArrowLeft size={18} /></Button>
-        <Pill tone="accent">Create student account</Pill>
-        <h1 style={{ margin: "10px 0" }}>
-          <TextReveal text="Start learning with Ibis" fontSize="clamp(1.6rem, 3.2vw, 3.4rem)" hoverColor="#db7a59" />
-        </h1>
-        <input required placeholder="Student name" />
-        <input required type="email" placeholder="Email address" />
-        <input required type="password" placeholder="Password" />
-        <ShinyButton type="submit" style={{ display: "flex", justifyContent: "center" }}>Continue to plans</ShinyButton>
-      </form>
+    <div
+      ref={pupilRef}
+      className="signup-pupil"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        backgroundColor: pupilColor,
+        transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`
+      }}
+    />
+  );
+}
+
+function EyeBall({
+  size = 48,
+  pupilSize = 16,
+  maxDistance = 10,
+  eyeColor = "white",
+  pupilColor = "black",
+  isBlinking = false,
+  forceLookX,
+  forceLookY
+}) {
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+  const eyeRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      setMouseX(event.clientX);
+      setMouseY(event.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const calculatePupilPosition = () => {
+    if (!eyeRef.current) return { x: 0, y: 0 };
+    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
+
+    const eye = eyeRef.current.getBoundingClientRect();
+    const eyeCenterX = eye.left + eye.width / 2;
+    const eyeCenterY = eye.top + eye.height / 2;
+    const deltaX = mouseX - eyeCenterX;
+    const deltaY = mouseY - eyeCenterY;
+    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
+    const angle = Math.atan2(deltaY, deltaX);
+
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance
+    };
+  };
+
+  const pupilPosition = calculatePupilPosition();
+
+  return (
+    <div
+      ref={eyeRef}
+      className="signup-eye-ball"
+      style={{
+        width: `${size}px`,
+        height: isBlinking ? "2px" : `${size}px`,
+        backgroundColor: eyeColor
+      }}
+    >
+      {!isBlinking && (
+        <div
+          className="signup-pupil"
+          style={{
+            width: `${pupilSize}px`,
+            height: `${pupilSize}px`,
+            backgroundColor: pupilColor,
+            transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SignupCharacters({ password, showPassword, isTyping }) {
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+  const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
+  const [isBlackBlinking, setIsBlackBlinking] = useState(false);
+  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
+  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+  const purpleRef = useRef(null);
+  const blackRef = useRef(null);
+  const yellowRef = useRef(null);
+  const orangeRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      setMouseX(event.clientX);
+      setMouseY(event.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  useEffect(() => {
+    const scheduleBlink = () => {
+      const blinkTimeout = window.setTimeout(() => {
+        setIsPurpleBlinking(true);
+        window.setTimeout(() => {
+          setIsPurpleBlinking(false);
+          scheduleBlink();
+        }, 150);
+      }, Math.random() * 4000 + 3000);
+
+      return blinkTimeout;
+    };
+
+    const timeout = scheduleBlink();
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    const scheduleBlink = () => {
+      const blinkTimeout = window.setTimeout(() => {
+        setIsBlackBlinking(true);
+        window.setTimeout(() => {
+          setIsBlackBlinking(false);
+          scheduleBlink();
+        }, 150);
+      }, Math.random() * 4000 + 3000);
+
+      return blinkTimeout;
+    };
+
+    const timeout = scheduleBlink();
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!isTyping) {
+      setIsLookingAtEachOther(false);
+      return undefined;
+    }
+
+    setIsLookingAtEachOther(true);
+    const timer = window.setTimeout(() => setIsLookingAtEachOther(false), 800);
+    return () => window.clearTimeout(timer);
+  }, [isTyping]);
+
+  useEffect(() => {
+    if (!(password.length > 0 && showPassword)) {
+      setIsPurplePeeking(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setIsPurplePeeking(true);
+      window.setTimeout(() => setIsPurplePeeking(false), 800);
+    }, Math.random() * 3000 + 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [password, showPassword, isPurplePeeking]);
+
+  const calculatePosition = (ref) => {
+    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
+
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 3;
+    const deltaX = mouseX - centerX;
+    const deltaY = mouseY - centerY;
+
+    return {
+      faceX: Math.max(-15, Math.min(15, deltaX / 20)),
+      faceY: Math.max(-10, Math.min(10, deltaY / 30)),
+      bodySkew: Math.max(-6, Math.min(6, -deltaX / 120))
+    };
+  };
+
+  const purplePos = calculatePosition(purpleRef);
+  const blackPos = calculatePosition(blackRef);
+  const yellowPos = calculatePosition(yellowRef);
+  const orangePos = calculatePosition(orangeRef);
+  const passwordVisible = password.length > 0 && showPassword;
+  const passwordHidden = password.length > 0 && !showPassword;
+
+  return (
+    <div className="signup-character-stage">
+      <div
+        ref={purpleRef}
+        className="signup-character signup-purple"
+        style={{
+          height: (isTyping || passwordHidden) ? "440px" : "400px",
+          transform: passwordVisible
+            ? "skewX(0deg)"
+            : (isTyping || passwordHidden)
+              ? `skewX(${(purplePos.bodySkew || 0) - 12}deg) translateX(40px)`
+              : `skewX(${purplePos.bodySkew || 0}deg)`
+        }}
+      >
+        <div
+          className="signup-eyes signup-purple-eyes"
+          style={{
+            left: passwordVisible ? "20px" : isLookingAtEachOther ? "55px" : `${45 + purplePos.faceX}px`,
+            top: passwordVisible ? "35px" : isLookingAtEachOther ? "65px" : `${40 + purplePos.faceY}px`
+          }}
+        >
+          <EyeBall size={18} pupilSize={7} maxDistance={5} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isPurpleBlinking} forceLookX={passwordVisible ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined} forceLookY={passwordVisible ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined} />
+          <EyeBall size={18} pupilSize={7} maxDistance={5} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isPurpleBlinking} forceLookX={passwordVisible ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined} forceLookY={passwordVisible ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined} />
+        </div>
+      </div>
+
+      <div
+        ref={blackRef}
+        className="signup-character signup-black"
+        style={{
+          transform: passwordVisible
+            ? "skewX(0deg)"
+            : isLookingAtEachOther
+              ? `skewX(${(blackPos.bodySkew || 0) * 1.5 + 10}deg) translateX(20px)`
+              : (isTyping || passwordHidden)
+                ? `skewX(${(blackPos.bodySkew || 0) * 1.5}deg)`
+                : `skewX(${blackPos.bodySkew || 0}deg)`
+        }}
+      >
+        <div
+          className="signup-eyes signup-black-eyes"
+          style={{
+            left: passwordVisible ? "10px" : isLookingAtEachOther ? "32px" : `${26 + blackPos.faceX}px`,
+            top: passwordVisible ? "28px" : isLookingAtEachOther ? "12px" : `${32 + blackPos.faceY}px`
+          }}
+        >
+          <EyeBall size={16} pupilSize={6} maxDistance={4} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isBlackBlinking} forceLookX={passwordVisible ? -4 : isLookingAtEachOther ? 0 : undefined} forceLookY={passwordVisible ? -4 : isLookingAtEachOther ? -4 : undefined} />
+          <EyeBall size={16} pupilSize={6} maxDistance={4} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isBlackBlinking} forceLookX={passwordVisible ? -4 : isLookingAtEachOther ? 0 : undefined} forceLookY={passwordVisible ? -4 : isLookingAtEachOther ? -4 : undefined} />
+        </div>
+      </div>
+
+      <div
+        ref={orangeRef}
+        className="signup-character signup-orange"
+        style={{ transform: passwordVisible ? "skewX(0deg)" : `skewX(${orangePos.bodySkew || 0}deg)` }}
+      >
+        <div
+          className="signup-eyes signup-orange-eyes"
+          style={{
+            left: passwordVisible ? "50px" : `${82 + orangePos.faceX}px`,
+            top: passwordVisible ? "85px" : `${90 + orangePos.faceY}px`
+          }}
+        >
+          <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
+          <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
+        </div>
+      </div>
+
+      <div
+        ref={yellowRef}
+        className="signup-character signup-yellow"
+        style={{ transform: passwordVisible ? "skewX(0deg)" : `skewX(${yellowPos.bodySkew || 0}deg)` }}
+      >
+        <div
+          className="signup-eyes signup-yellow-eyes"
+          style={{
+            left: passwordVisible ? "20px" : `${52 + yellowPos.faceX}px`,
+            top: passwordVisible ? "35px" : `${40 + yellowPos.faceY}px`
+          }}
+        >
+          <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
+          <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
+        </div>
+        <div
+          className="signup-yellow-mouth"
+          style={{
+            left: passwordVisible ? "10px" : `${40 + yellowPos.faceX}px`,
+            top: passwordVisible ? "88px" : `${88 + yellowPos.faceY}px`
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Signup({ onBack, onPay, onLogin, onLegal }) {
+  const [authMode, setAuthMode] = useState("signup");
+  const [showPassword, setShowPassword] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const isLogin = authMode === "login";
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsLoading(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    setIsLoading(false);
+    if (isLogin) {
+      onLogin();
+    } else {
+      onPay();
+    }
+  };
+
+  const switchMode = (mode) => {
+    setAuthMode(mode);
+    setShowPassword(false);
+    setIsTyping(false);
+  };
+
+  return (
+    <section className="signup-screen">
+      <div className="auth-terminal-bg" aria-hidden="true">
+        <FaultyTerminal
+          scale={1.5}
+          gridMul={[2, 1]}
+          digitSize={1.2}
+          timeScale={0.5}
+          scanlineIntensity={0.5}
+          glitchAmount={1}
+          flickerAmount={1}
+          noiseAmp={1}
+          chromaticAberration={0}
+          dither={0}
+          curvature={0.1}
+          tint="#9b3f24"
+          mouseStrength={0.5}
+          brightness={0.72}
+          transparent
+        />
+      </div>
+      <div className="signup-shell">
+        <div className="signup-visual-panel">
+          <div className="signup-visual-top">
+            <Brand compact />
+          </div>
+
+          <div className="signup-character-wrap">
+            <SignupCharacters password={password} showPassword={showPassword} isTyping={isTyping} />
+          </div>
+
+          <div className="signup-panel-footer">
+            <button type="button" onClick={() => onLegal("privacy")}>Privacy Policy</button>
+            <button type="button" onClick={() => onLegal("terms")}>Terms of Service</button>
+            <button type="button" onClick={() => onLegal("contact")}>Contact</button>
+          </div>
+        </div>
+
+        <div className="signup-form-panel">
+          <form className="signup-form-card" onSubmit={handleSubmit}>
+            <Button type="button" className="icon-btn signup-back-btn" aria-label="Back" onClick={onBack}>
+              <ArrowLeft size={18} />
+            </Button>
+
+            <div className="auth-mode-tabs" aria-label="Choose account action">
+              <button type="button" className={!isLogin ? "active" : ""} onClick={() => switchMode("signup")}>Sign up</button>
+              <button type="button" className={isLogin ? "active" : ""} onClick={() => switchMode("login")}>Login</button>
+            </div>
+
+            <div className="signup-form-heading">
+              <span className="auth-kicker">{isLogin ? "Student access" : "Create student account"}</span>
+              <h1>{isLogin ? "Welcome back to Ibis" : "Start learning with Ibis"}</h1>
+              <p>
+                {isLogin
+                  ? "Login to reopen your classes, progress, tests, and teacher updates."
+                  : "Create your portal account, then choose the plan or batch access that fits you."}
+              </p>
+            </div>
+
+            {!isLogin && (
+              <label className="signup-field">
+                <span>Student name</span>
+                <div className="signup-glass-input">
+                  <Users size={18} />
+                  <input
+                    required
+                    type="text"
+                    placeholder="Your name"
+                    value={studentName}
+                    onChange={(event) => setStudentName(event.target.value)}
+                    onFocus={() => setIsTyping(true)}
+                    onBlur={() => setIsTyping(false)}
+                  />
+                </div>
+              </label>
+            )}
+
+            <label className="signup-field">
+              <span>Email</span>
+              <div className="signup-glass-input">
+                <Mail size={18} />
+                <input
+                  required
+                  type="email"
+                  placeholder="anna@gmail.com"
+                  value={email}
+                  autoComplete="off"
+                  onChange={(event) => setEmail(event.target.value)}
+                  onFocus={() => setIsTyping(true)}
+                  onBlur={() => setIsTyping(false)}
+                />
+              </div>
+            </label>
+
+            <label className="signup-field">
+              <span>Password</span>
+              <div className="signup-glass-input signup-password-wrap">
+                <Lock size={18} />
+                <input
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  onFocus={() => setIsTyping(true)}
+                  onBlur={() => setIsTyping(false)}
+                />
+                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((current) => !current)}>
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </label>
+
+            <div className="signup-options">
+              <label>
+                <input type="checkbox" />
+                <span>Remember for 30 days</span>
+              </label>
+              {isLogin ? <button type="button">Forgot password?</button> : <span className="signup-secure-note"><Lock size={13} /> Secure checkout next</span>}
+            </div>
+
+            <GlassButton type="submit" size="default" className="auth-cta-glass" contentClassName="auth-cta-glass-text" disabled={isLoading}>
+              <span>{isLoading ? (isLogin ? "Logging in..." : "Creating account...") : (isLogin ? "Login to portal" : "Continue to plans")}</span>
+              <ArrowRight size={18} />
+            </GlassButton>
+
+            <button type="button" className="auth-switch-copy" onClick={() => switchMode(isLogin ? "signup" : "login")}>
+              {isLogin ? "New to Ibis? Create a student account" : "Already have an account? Login"}
+            </button>
+
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LegalInfoPage({ page, onBack }) {
+  const [activePage, setActivePage] = useState(page);
+  const content = {
+    privacy: {
+      title: "Privacy Policy",
+      eyebrow: "Student data, handled with restraint",
+      summary: "Ibis Physics collects only the details needed to run your learning portal, plan access, progress tracking, batch support, and payment flow.",
+      paragraphs: [
+        "Your name, email, batch details, teacher code, and payment status are used only to identify your account and keep your learning access accurate.",
+        "Progress signals such as lessons opened, tests attempted, notes viewed, and study history help the portal make your preparation clearer and more personal.",
+        "We do not sell student data or turn private progress into public ranking. Access stays limited to the student, mentor, and support workflows that genuinely need it."
+      ],
+      promise: "The principle is simple: keep the portal useful, keep the data minimal, and keep every student’s academic trail private."
+    },
+    terms: {
+      title: "Terms of Service",
+      eyebrow: "Clear rules for a focused classroom",
+      summary: "By using Ibis Physics, you agree to use the lessons, notes, tests, and portal tools for your own preparation and assigned batch access.",
+      paragraphs: [
+        "Your account is personal to you. Sharing credentials, batch codes, paid lessons, notes, or recorded material can lead to paused or removed access.",
+        "Some checkout and portal flows may be demos while the platform is being built. Final payments should happen only through verified Ibis Physics channels.",
+        "All lessons, PDFs, videos, tests, and study tracks are created for enrolled students. They are learning material, not content for redistribution."
+      ],
+      promise: "The goal is a serious learning space: respectful use, honest access, and no noise around the work that matters."
+    },
+    contact: {
+      title: "Contact",
+      eyebrow: "Support that knows the classroom",
+      summary: "For batch access, payment help, account recovery, or study guidance, contact Ibis Physics using the same email connected to your portal.",
+      paragraphs: [
+        "For account or payment help, send your name, registered email, and batch name if you have one. That gives support enough context to respond properly.",
+        "For a lesson, test, or notes issue, mention the chapter and the action you were trying to complete. Clear context helps us fix the right thing faster.",
+        "For parent or school enquiries, include the student’s class details and a callback number so the response can stay practical and specific."
+      ],
+      promise: "Support is designed to be direct and practical, so students get back to physics instead of chasing portal confusion."
+    }
+  };
+  const active = content[activePage] || content.privacy;
+
+  return (
+    <section className={`legal-screen legal-${activePage}`}>
+      <div className="legal-layout">
+        <header className="legal-topbar">
+          <Button type="button" className="legal-back-btn" aria-label="Back to signup" onClick={onBack}>
+            <ArrowLeft size={18} />
+            <span>Back to signup</span>
+          </Button>
+          <Brand compact />
+          <nav className="legal-actions" aria-label="Legal sections">
+            <button type="button" className={activePage === "privacy" ? "active" : ""} onClick={() => setActivePage("privacy")}>Privacy</button>
+            <button type="button" className={activePage === "terms" ? "active" : ""} onClick={() => setActivePage("terms")}>Terms</button>
+            <button type="button" className={activePage === "contact" ? "active" : ""} onClick={() => setActivePage("contact")}>Contact</button>
+          </nav>
+        </header>
+
+        <div className="legal-hero" key={activePage}>
+          <div className="legal-title-block">
+            <h1>{active.title}</h1>
+            <p>{active.summary}</p>
+          </div>
+
+          <div className="legal-prose">
+            {active.paragraphs.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
+
+          <div className="legal-closing">
+            <Check size={18} />
+            <p>{active.promise}</p>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
