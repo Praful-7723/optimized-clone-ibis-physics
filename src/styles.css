@@ -2387,7 +2387,7 @@ textarea {
 .signup-form-panel {
   position: relative;
   display: grid;
-  align-items: center;
+  align-items: start;
   justify-items: start;
   min-height: 0;
   overflow: hidden;
