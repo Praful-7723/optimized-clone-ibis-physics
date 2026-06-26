@@ -4,6 +4,7 @@ import { Badge } from "./components/ui/new-badge";
 import { TimelineContent } from "./components/ui/timeline-animation";
 import { RainbowButton } from "./components/ui/rainbow-button";
 import FaultyTerminal from "./components/ui/FaultyTerminal";
+import { AwardBadge } from "./components/ui/award-badge";
 import { createRoot } from "react-dom/client";
 import {
   ArrowDown,
@@ -47,6 +48,7 @@ import "katex/dist/katex.min.css";
 import "./styles.css";
 
 const assetBase = "/ibis-assets/hero-section-morphing-images/";
+const chapterAssetVersion = "20260626";
 
 const chapterSeed = [
   ["Electric Charges and Fields", "ch01_electric_charges_and_fields_48837919.png"],
@@ -125,7 +127,7 @@ const buildTopic = (chapterId, topic, index) => ({
 const initialChapters = chapterSeed.map(([name, image], index) => ({
   id: index + 1,
   name,
-  image: `${assetBase}${image}`,
+  image: `${assetBase}${image}?v=${chapterAssetVersion}`,
   progress: [82, 66, 58, 41, 37, 29, 22, 18, 53, 47, 33, 24, 19, 14][index],
   topics: topicNames[index + 1].map((topic, topicIndex) => buildTopic(index + 1, topic, topicIndex))
 }));
@@ -234,6 +236,7 @@ const AnimatedMeshBackground = () => (
 
 function App() {
   const [screen, setScreen] = useState("landing");
+  const [pricingSource, setPricingSource] = useState("signup");
   const [chapters, setChapters] = useState(initialChapters);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [topicIndex, setTopicIndex] = useState(0);
@@ -283,9 +286,10 @@ function App() {
           chapterIndex={chapterIndex}
           setChapterIndex={setChapterIndex}
           onTrial={() => enterPortal("trial")}
-          onStart={() => setScreen("signup")}
+          onStart={() => { setPricingSource("signup"); setScreen("signup"); }}
           onAdmin={() => setScreen("admin")}
           onWhyIbis={() => setScreen("why-ibis")}
+          onPricing={() => { setPricingSource("landing"); setScreen("checkout"); }}
         />
       )}
 
@@ -304,7 +308,7 @@ function App() {
           onBatch={() => setBatchOpen(true)}
           onLogout={() => setScreen("landing")}
           showPaywall={paywall}
-          onPay={() => setScreen("signup")}
+          onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
           onClosePaywall={() => setPaywall(false)}
         />
       )}
@@ -318,7 +322,7 @@ function App() {
           tab={tab}
           setTab={setTab}
           onBack={() => setScreen("student")}
-          onPay={() => setScreen("signup")}
+          onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
         />
       )}
 
@@ -341,7 +345,7 @@ function App() {
       {screen === "signup" && (
         <Signup
           onBack={() => setScreen("landing")}
-          onPay={() => setScreen("checkout")}
+          onPay={() => { setPricingSource("signup"); setScreen("checkout"); }}
           onLogin={() => enterPortal("full")}
           onLegal={(page) => {
             setLegalPage(page);
@@ -350,7 +354,7 @@ function App() {
         />
       )}
       {screen === "legal" && <LegalInfoPage page={legalPage} onBack={() => setScreen("signup")} />}
-      {screen === "checkout" && <Checkout onBack={() => setScreen("signup")} onDone={() => enterPortal("full")} />}
+      {screen === "checkout" && <Checkout onBack={() => setScreen(pricingSource === "landing" ? "landing" : "signup")} onDone={() => enterPortal("full")} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} />}
     </main>
   );
@@ -378,7 +382,7 @@ function Button({ children, variant = "secondary", className = "", ...props }) {
 function GlassButton({ className = "", children, size = "default", contentClassName = "", onClick, ...props }) {
   const handleWrapperClick = (e) => {
     const button = e.currentTarget.querySelector("button");
-    if (button && e.target !== button) {
+    if (button && !button.contains(e.target)) {
       button.click();
     }
   };
@@ -519,6 +523,59 @@ function GradientBlobCard({ children, className = "", onClick }) {
       <div className="blob-glass" />
       <div style={{ position: "relative", zIndex: 1 }}>
         {children}
+      </div>
+    </div>
+  );
+}
+
+function ReflectiveTiltFrame({ children, className = "", featured = false }) {
+  const frameRef = useRef(null);
+  const [matrix, setMatrix] = useState("1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1");
+  const [glare, setGlare] = useState({ x: 50, y: 18, active: false });
+
+  const handleMove = (event) => {
+    const node = frameRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const relX = (event.clientX - rect.left) / rect.width - 0.5;
+    const relY = (event.clientY - rect.top) / rect.height - 0.5;
+    const rotateX = (-relY * 0.16).toFixed(4);
+    const rotateY = (relX * 0.16).toFixed(4);
+    const rotateZ = (relX * 0.035).toFixed(4);
+    setMatrix(`1, 0, ${rotateY}, 0, ${rotateZ}, 1, ${rotateX}, 0, ${-rotateY}, ${-rotateX}, 1, 0, 0, 0, 0, 1`);
+    setGlare({
+      x: Math.round((event.clientX - rect.left) / rect.width * 100),
+      y: Math.round((event.clientY - rect.top) / rect.height * 100),
+      active: true
+    });
+  };
+
+  return (
+    <div
+      ref={frameRef}
+      className={`reflective-plan-frame ${featured ? "featured" : ""} ${className}`}
+      onMouseMove={handleMove}
+      onMouseEnter={() => setGlare((current) => ({ ...current, active: true }))}
+      onMouseLeave={() => {
+        setMatrix("1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1");
+        setGlare((current) => ({ ...current, active: false }));
+      }}
+      style={{
+        transform: `perspective(900px) matrix3d(${matrix})`,
+        "--glare-x": `${glare.x}%`,
+        "--glare-y": `${glare.y}%`,
+        "--glare-opacity": glare.active ? 1 : 0
+      }}
+    >
+      <div className="reflective-plan-card">
+        <span className="pricing-reflect pricing-reflect-1" />
+        <span className="pricing-reflect pricing-reflect-2" />
+        <span className="pricing-reflect pricing-reflect-3" />
+        <span className="pricing-reflect pricing-reflect-4" />
+        <span className="pricing-reflect pricing-reflect-5" />
+        <div className="reflective-plan-content">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -706,16 +763,15 @@ function RockerSwitch({ checked, onChange }) {
 function WhyIbisView({ onBack }) {
   const containerRef = useRef(null);
   const whyIbisHeroRef = useRef(null);
-  const [hovering, setHovering] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (event) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setMousePos({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    });
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    container.style.setProperty("--mouse-x", `${x}px`);
+    container.style.setProperty("--mouse-y", `${y}px`);
   };
 
   const revealVariants = {
@@ -767,65 +823,54 @@ function WhyIbisView({ onBack }) {
       <div className="why-ibis-split-layout">
         {/* Left Content Section */}
         <div className="why-ibis-text-content">
-          <TimelineContent
-            as="div"
-            animationNum={0}
-            timelineRef={whyIbisHeroRef}
-            customVariants={revealVariants}
-            className="why-ibis-intro"
-          >
-            <div className="why-ibis-title-heading">
-              Hey, it's <span>Ganesh</span>—your teacher who's gonna make physics <i>easy</i> for you.
-            </div>
-
-            <div className="why-ibis-story-copy">
-              We are{" "}
-              <span className="glass-badge-reflect glass-badge-blue">rebuilding</span>{" "}
-              physics learning to be <strong className="glass-badge-reflect glass-badge-cream">zero noise</strong> and{" "}
-              <span className="why-soft-emphasis glass-badge-reflect glass-badge-teal">board optimized</span>. My mission is to build boardroom confidence
-              and make complex concepts{" "}
-              <TimelineContent
-                as="span"
-                animationNum={2}
-                timelineRef={whyIbisHeroRef}
-                customVariants={textVariants}
-                className="why-micro-chip"
-              >
-                click
-              </TimelineContent>{". "}
-              Through step-by-step{" "}
-              <span className="glass-badge-reflect glass-badge-gold">visual patterns</span>, intuitive derivations, and hand-tailored{" "}
-              <span className="glass-badge-reflect glass-badge-purple">study tracks</span>,
-              we turn intimidating equations into natural reflexes. Every class is engineered to spark curiosity,
-              reduce{" "}
-              <span className="glass-badge-reflect glass-badge-pink">exam anxiety</span>, and make top-tier mentoring accessible.
-            </div>
-          </TimelineContent>
-
-          <div style={{ marginTop: "28px" }}>
+          <div className="why-ibis-glass-card">
             <TimelineContent
               as="div"
-              animationNum={4}
+              animationNum={0}
               timelineRef={whyIbisHeroRef}
-              customVariants={textVariants}
-              style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}
+              customVariants={revealVariants}
+              className="why-ibis-intro"
             >
-              <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #00f2fe, #4facfe, #00f2fe, #4facfe, #00f2fe)" }}>
-                M.Sc., M.Phil & B.Ed. (Harvard L&M)
-              </RainbowButton>
-              <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #ff0844, #ffb199, #ff0844, #ffb199, #ff0844)" }}>
-                Science Workshops
-              </RainbowButton>
-              <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #f6d365, #fda085, #f6d365, #fda085, #f6d365)" }}>
-                Teacher Training
-              </RainbowButton>
-              <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #f5576c, #f093fb, #f5576c, #f093fb, #f5576c)" }}>
-                Harvard Leadership
-              </RainbowButton>
-              <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #a18cd1, #fbc2eb, #a18cd1, #fbc2eb, #a18cd1)" }}>
-                JEE/NEET Pedagogy
-              </RainbowButton>
+              <div className="why-ibis-title-heading">
+                Hey, it's <span>Ganesh</span>—your teacher who's gonna make physics <i>easy</i> for you.
+              </div>
+
+              <div className="why-ibis-story-copy">
+                We are{" "}
+                <span className="glass-badge-reflect glass-badge-blue">rebuilding</span>{" "}
+                physics learning to be <strong className="glass-badge-reflect glass-badge-cream">zero noise</strong> and{" "}
+                <span className="why-soft-emphasis glass-badge-reflect glass-badge-teal">board optimized</span>. My mission is to build boardroom confidence
+                and make complex concepts{" "}
+                <TimelineContent
+                  as="span"
+                  animationNum={2}
+                  timelineRef={whyIbisHeroRef}
+                  customVariants={textVariants}
+                  className="why-micro-chip"
+                >
+                  click
+                </TimelineContent>{" "}
+                for you. Through step-by-step{" "}
+                <span className="glass-badge-reflect glass-badge-gold">visual patterns</span>, intuitive derivations, and hand-tailored{" "}
+                <span className="glass-badge-reflect glass-badge-purple">study tracks</span>,
+                we turn intimidating equations into natural reflexes. Every class is engineered to spark curiosity,
+                reduce{" "}
+                <span className="glass-badge-reflect glass-badge-pink">exam anxiety</span>, and make top-tier mentoring accessible.
+              </div>
             </TimelineContent>
+
+            <div style={{ marginTop: "32px" }}>
+              <TimelineContent
+                as="div"
+                animationNum={4}
+                timelineRef={whyIbisHeroRef}
+                customVariants={textVariants}
+                style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-start" }}
+              >
+                <AwardBadge type="cbse-coaching" variant="transparent" />
+                <AwardBadge type="harvard-leadership" variant="transparent" />
+              </TimelineContent>
+            </div>
           </div>
         </div>
 
@@ -834,8 +879,6 @@ function WhyIbisView({ onBack }) {
           <div
             ref={containerRef}
             className="why-ibis-portrait-container-full"
-            onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => setHovering(false)}
             onMouseMove={handleMouseMove}
           >
             <img
@@ -848,25 +891,9 @@ function WhyIbisView({ onBack }) {
               src="/ibis-assets/ganesh2.png"
               alt="Ganesh original portrait"
               className="mentor-img-reveal-full"
-              style={{
-                clipPath: hovering
-                  ? `circle(82px at ${mousePos.x}px ${mousePos.y}px)`
-                  : "circle(0px at 0px 0px)",
-                WebkitClipPath: hovering
-                  ? `circle(82px at ${mousePos.x}px ${mousePos.y}px)`
-                  : "circle(0px at 0px 0px)"
-              }}
               draggable="false"
             />
-            {hovering && (
-              <div
-                className="reveal-lens-cursor-large"
-                style={{
-                  left: `${mousePos.x}px`,
-                  top: `${mousePos.y}px`
-                }}
-              />
-            )}
+            <div className="reveal-lens-cursor-large" />
           </div>
         </div>
       </div>
@@ -928,7 +955,8 @@ function PortalBadge() {
   );
 }
 
-function Landing({ chapters, chapterIndex, setChapterIndex, onTrial, onStart, onAdmin, onWhyIbis }) {
+function Landing({ chapters, chapterIndex, setChapterIndex, onTrial, onStart, onAdmin, onWhyIbis, onPricing }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const studentFeatures = [
     {
       icon: <BookOpen size={20} />,
@@ -974,10 +1002,36 @@ function Landing({ chapters, chapterIndex, setChapterIndex, onTrial, onStart, on
       </div>
 
       {/* Floating Top-Right Actions */}
-      <div style={{ position: "absolute", top: "24px", right: "24px", zIndex: 50, display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ position: "absolute", top: "24px", right: "24px", zIndex: 100, display: "flex", alignItems: "center", gap: "16px" }}>
         <RockerSwitch checked={false} onChange={(val) => { if (val) onWhyIbis(); }} />
         <TesplePill />
-        <Button className="icon-btn subtle" aria-label="Admin demo" onClick={onAdmin}><Menu size={18} /></Button>
+        <div className="glass-dropdown-wrapper">
+          <Button className="icon-btn subtle" aria-label="Menu" onClick={() => setMenuOpen(!menuOpen)}>
+            <Menu size={18} />
+          </Button>
+          {menuOpen && (
+            <>
+              <div 
+                style={{ position: "fixed", inset: 0, zIndex: 99, cursor: "default" }} 
+                onClick={() => setMenuOpen(false)} 
+              />
+              <div className="glass-dropdown-menu" style={{ zIndex: 100 }}>
+                <button 
+                  className="glass-dropdown-item" 
+                  onClick={() => { setMenuOpen(false); onPricing(); }}
+                >
+                  Pricing
+                </button>
+                <button 
+                  className="glass-dropdown-item" 
+                  onClick={() => { setMenuOpen(false); onAdmin(); }}
+                >
+                  Admin
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="landing-grid" style={{ position: "relative", zIndex: 1 }}>
@@ -1051,6 +1105,101 @@ function Feature({ icon, title, copy }) {
   );
 }
 
+function StudentChapterShowcase({
+  access,
+  chapters,
+  activeIndex,
+  setActiveIndex,
+  onOpen
+}) {
+  const [direction, setDirection] = useState(0);
+  const wheelLockRef = useRef(0);
+  const activeChapter = chapters[activeIndex] || chapters[0];
+  const activeLocked = access !== "full" && !activeChapter.topics.some((topic) => topic.isFree);
+  const directionClass = direction < 0 ? "from-previous" : "from-next";
+
+  const moveChapter = (step) => {
+    if (!chapters.length) return;
+    setDirection(step);
+    setActiveIndex((current) => (current + step + chapters.length) % chapters.length);
+  };
+
+  const handleWheel = (event) => {
+    event.preventDefault();
+    const now = Date.now();
+    if (now - wheelLockRef.current < 560 || Math.abs(event.deltaY) < 16) return;
+    wheelLockRef.current = now;
+    moveChapter(event.deltaY > 0 ? 1 : -1);
+  };
+
+  const progressDots = chapters.map((item, index) => (
+    <button
+      key={item.id}
+      type="button"
+      className={index === activeIndex ? "active" : ""}
+      aria-label={`Show chapter ${index + 1}: ${item.name}`}
+      onClick={() => {
+        setDirection(index > activeIndex ? 1 : -1);
+        setActiveIndex(index);
+      }}
+    />
+  ));
+
+  return (
+    <section className="student-chapter-showcase" onWheel={handleWheel}>
+      <div className="student-showcase-main">
+        <div className="student-showcase-top">
+          <div>
+            <span>Chapter {activeIndex + 1} of {chapters.length}</span>
+            <strong>{activeChapter.progress}% complete</strong>
+          </div>
+          <Pill tone={access === "full" ? "accent" : "warning"}>{access === "full" ? "full access" : "trial access"}</Pill>
+        </div>
+
+        <div className="student-deck-stage" aria-live="polite">
+          <article
+            key={activeChapter.id}
+            className={`student-feature-chapter-card ${directionClass} ${activeLocked ? "locked" : ""}`}
+          >
+            <img className="student-feature-image" src={activeChapter.image} alt={`${activeChapter.name} thumbnail`} draggable={false} />
+            <div className="student-feature-scrim" />
+            {activeLocked && (
+              <span className="student-feature-lock"><Lock size={15} /> Full access</span>
+            )}
+            <div className="student-feature-copy">
+              <span>Chapter {activeChapter.id} · {activeChapter.progress}% complete</span>
+              <h2>{activeChapter.name}</h2>
+              <p>{activeChapter.topics.slice(0, 3).map((topic) => topic.name).join(" · ")}</p>
+            </div>
+            <GlassButton type="button" size="default" className="student-feature-read" contentClassName="student-feature-read-text" onClick={onOpen}>
+              <span>{activeLocked ? "Unlock" : "Read"}</span>
+              <ArrowRight size={18} />
+            </GlassButton>
+          </article>
+        </div>
+
+        <div className="student-showcase-footer">
+          <div className="student-chapter-dots">{progressDots}</div>
+          <GlassButton type="button" size="default" className="student-open-glass" contentClassName="student-open-glass-text" onClick={onOpen}>
+            {activeLocked ? <Lock size={17} /> : <ArrowRight size={17} />}
+            <span>{activeLocked ? "Unlock selected chapter" : "Open selected chapter"}</span>
+          </GlassButton>
+        </div>
+      </div>
+
+      <div className="student-deck-controls" aria-label="Chapter navigation">
+        <GlassButton type="button" size="icon" aria-label="Previous chapter" onClick={() => moveChapter(-1)}>
+          <ArrowUp size={19} />
+        </GlassButton>
+        <span>{String(activeIndex + 1).padStart(2, "0")}</span>
+        <GlassButton type="button" size="icon" aria-label="Next chapter" onClick={() => moveChapter(1)}>
+          <ArrowDown size={19} />
+        </GlassButton>
+      </div>
+    </section>
+  );
+}
+
 function StudentPortal({
   access,
   chapters,
@@ -1065,7 +1214,6 @@ function StudentPortal({
   onClosePaywall
 }) {
   const chapter = chapters[chapterIndex];
-  const locked = access !== "full" && !chapter.topics.some((topic) => topic.isFree);
 
   const [statsOpen, setStatsOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -1100,22 +1248,13 @@ function StudentPortal({
         </aside>
 
         <section className="chapter-switcher">
-          <div className="switcher-header">
-            <span>Chapter {chapterIndex + 1} of {chapters.length}</span>
-            <Pill tone={access === "full" ? "accent" : "warning"}>{access === "full" ? "full access" : "trial access"}</Pill>
-          </div>
-          <ChapterCardStack
+          <StudentChapterShowcase
+            access={access}
             chapters={chapters}
             activeIndex={chapterIndex}
             setActiveIndex={setChapterIndex}
-            mode="student"
-            locked={locked}
             onOpen={openChapter}
           />
-          <Button variant="primary" className="open-stack-btn" onClick={openChapter}>
-            {locked ? <Lock size={17} /> : <ArrowRight size={17} />}
-            Open selected chapter
-          </Button>
         </section>
       </div>
 
@@ -2499,6 +2638,7 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [activeAuthField, setActiveAuthField] = useState(null);
   const isLogin = authMode === "login";
 
   const handleSubmit = async (event) => {
@@ -2517,10 +2657,34 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
     setAuthMode(mode);
     setShowPassword(false);
     setIsTyping(false);
+    setActiveAuthField(null);
   };
+
+  const gooStyle = (field, type) => (
+    activeAuthField === field
+      ? {
+          opacity: 1,
+          transform: type === "main" ? "translateY(-50%) scale(1.05)" : "scale(1)"
+        }
+      : undefined
+  );
 
   return (
     <section className="signup-screen">
+      <svg className="auth-gooey-filter" aria-hidden="true">
+        <defs>
+          <filter id="auth-input-goo" x="-40%" y="-80%" width="180%" height="260%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+            <feColorMatrix
+              in="blur"
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
+              result="goo"
+            />
+            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+          </filter>
+        </defs>
+      </svg>
       <div className="auth-terminal-bg" aria-hidden="true">
         <FaultyTerminal
           scale={1.5}
@@ -2582,6 +2746,8 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
               <label className="signup-field">
                 <span>Student name</span>
                 <div className="signup-glass-input">
+                  <span className="auth-input-goo auth-input-goo-main" style={gooStyle("name", "main")} aria-hidden="true" />
+                  <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("name", "orb")} aria-hidden="true" />
                   <Users size={18} />
                   <input
                     required
@@ -2589,8 +2755,14 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                     placeholder="Your name"
                     value={studentName}
                     onChange={(event) => setStudentName(event.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
+                    onFocus={() => {
+                      setIsTyping(true);
+                      setActiveAuthField("name");
+                    }}
+                    onBlur={() => {
+                      setIsTyping(false);
+                      setActiveAuthField(null);
+                    }}
                   />
                 </div>
               </label>
@@ -2599,6 +2771,8 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
             <label className="signup-field">
               <span>Email</span>
               <div className="signup-glass-input">
+                <span className="auth-input-goo auth-input-goo-main" style={gooStyle("email", "main")} aria-hidden="true" />
+                <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("email", "orb")} aria-hidden="true" />
                 <Mail size={18} />
                 <input
                   required
@@ -2607,8 +2781,14 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                   value={email}
                   autoComplete="off"
                   onChange={(event) => setEmail(event.target.value)}
-                  onFocus={() => setIsTyping(true)}
-                  onBlur={() => setIsTyping(false)}
+                  onFocus={() => {
+                    setIsTyping(true);
+                    setActiveAuthField("email");
+                  }}
+                  onBlur={() => {
+                    setIsTyping(false);
+                    setActiveAuthField(null);
+                  }}
                 />
               </div>
             </label>
@@ -2616,6 +2796,8 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
             <label className="signup-field">
               <span>Password</span>
               <div className="signup-glass-input signup-password-wrap">
+                <span className="auth-input-goo auth-input-goo-main" style={gooStyle("password", "main")} aria-hidden="true" />
+                <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("password", "orb")} aria-hidden="true" />
                 <Lock size={18} />
                 <input
                   required
@@ -2623,8 +2805,14 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  onFocus={() => setIsTyping(true)}
-                  onBlur={() => setIsTyping(false)}
+                  onFocus={() => {
+                    setIsTyping(true);
+                    setActiveAuthField("password");
+                  }}
+                  onBlur={() => {
+                    setIsTyping(false);
+                    setActiveAuthField(null);
+                  }}
                 />
                 <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((current) => !current)}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -2733,61 +2921,261 @@ function LegalInfoPage({ page, onBack }) {
   );
 }
 
-function Checkout({ onBack, onDone }) {
+const LightCheckIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <circle cx="8" cy="8" r="8" fill="#201611" />
+    <path
+      d="M5.5 8.5L7 10L11 6"
+      stroke="white"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const DarkCheckIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <circle cx="8" cy="8" r="7.5" stroke="rgba(250, 248, 245, 0.4)" />
+    <path
+      d="M5.5 8.5L7 10L11 6"
+      stroke="white"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ToggleSwitch = ({ enabled, onChange, isDark = false, label }) => {
+  return (
+    <div className="pricing-stolen-toggle-container">
+      <button
+        type="button"
+        onClick={() => onChange(!enabled)}
+        className={`pricing-stolen-toggle-btn ${enabled ? 'enabled' : 'disabled'} ${
+          isDark
+            ? enabled
+              ? "dark-enabled"
+              : "dark-disabled"
+            : enabled
+            ? "light-enabled"
+            : "light-disabled"
+        }`}
+        aria-pressed={enabled}
+        aria-label={label}
+      >
+        <span
+          className={`pricing-stolen-toggle-thumb ${
+            isDark
+              ? enabled
+                ? "dark-enabled-thumb"
+                : "dark-disabled-thumb"
+              : enabled
+              ? "light-enabled-thumb"
+              : "light-disabled-thumb"
+          }`}
+        />
+      </button>
+      <span className="pricing-stolen-toggle-label">{label}</span>
+    </div>
+  );
+};
+
+const AcademicHatIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+    <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+  </svg>
+);
+
+function Checkout({ onBack }) {
+  const [starterFast, setStarterFast] = useState(false);
+  const [proFast, setProFast] = useState(false);
+
+  // Price calculations
+  const starterPrice = starterFast ? 2499 + 499 : 2499;
+  const proPrice = proFast ? 14999 + 1999 : 14999;
+
+  const starterFeatures = [
+    { text: "1 Chapter Access", enabled: true },
+    { text: "Core Physics Lessons", enabled: true },
+    { text: "Active Doubt Support", enabled: true },
+    { text: "Basic Practice", enabled: true },
+    { text: "Progression Tracking", enabled: false },
+    { text: "Rewards & Badges", enabled: false },
+    { text: "Leaderboard & Ranking", enabled: false },
+  ];
+
+  const proFeatures = [
+    { text: "Full Access (All Chapters)", enabled: true },
+    { text: "Core Physics Lessons", enabled: true },
+    { text: "Active Doubt Support", enabled: true },
+    { text: "Basic Practice", enabled: true },
+    { text: "Progression Tracking", enabled: true },
+    { text: "Rewards & Badges", enabled: true },
+    { text: "Leaderboard & Ranking", enabled: true },
+  ];
+
   return (
     <section className="checkout-flow">
-      <div style={{ display: "flex", width: "100%", justifyContent: "flex-start", marginBottom: "16px" }}>
-        <Button className="icon-btn" aria-label="Back" onClick={onBack}><ArrowLeft size={18} /></Button>
+      {/* Top Bar Navigation & Logo */}
+      <div className="checkout-top-bar">
+        <Button 
+          className="icon-btn pricing-back" 
+          aria-label="Back" 
+          onClick={onBack}
+        >
+          <ArrowLeft size={18} />
+        </Button>
+        <Brand compact />
       </div>
-      <div className="checkout-heading">
-        <Pill tone="accent"><ReceiptIndianRupee size={14} /> Razorpay test checkout</Pill>
-        <h1 style={{ margin: "8px 0" }}>
-          <TextReveal text="Choose how your syllabus unlocks" fontSize="clamp(1.8rem, 3.6vw, 3.8rem)" hoverColor="#db7a59" />
+
+      {/* Main Page Title */}
+      <div style={{ textAlign: "center", marginTop: "20px", marginBottom: "8px" }}>
+        <h1 style={{ 
+          fontFamily: "var(--poster)", 
+          fontSize: "clamp(2rem, 4vw, 2.8rem)", 
+          fontWeight: 800, 
+          margin: "0 0 8px 0", 
+          color: "#faf4eb",
+          letterSpacing: "-0.03em"
+        }}>
+          Choose Your <span style={{ fontFamily: "var(--handwriting)", color: "var(--cream)", fontWeight: 400, marginLeft: "4px", marginRight: "4px" }}>Perfect</span> Plan
         </h1>
+        <p style={{ fontFamily: "var(--body)", fontSize: "14px", color: "rgba(250, 244, 235, 0.75)", margin: 0, maxWidth: "540px", display: "inline-block" }}>
+          Select the perfect access level to master physics with interactive simulations and structured learning.
+        </p>
       </div>
-      <div className="plans">
-        <PlanCard
-          icon={<Flame />}
-          title="Limited Access"
-          badge="1 lesson / month"
-          copy="A monthly drip-feed path for students who want guided pacing and recurring access."
-          cta="Select limited access"
-          onClick={onDone}
-        />
-        <PlanCard
-          featured
-          icon={<WandSparkles />}
-          title="Full Access"
-          badge="12 months"
-          copy="All 14 chapters unlock immediately with notes, videos, worked examples, and batch progress."
-          cta="Get full access"
-          onClick={onDone}
-        />
+
+      {/* Cards Grid */}
+      <div className="pricing-stolen-grid">
+        {/* Starter Card (1-Month Access) */}
+        <div className="pricing-stolen-card-light">
+          <div className="pricing-stolen-inner-light">
+            <div className="pricing-stolen-header">
+              <div className="pricing-stolen-title-area">
+                <h2>1-Month</h2>
+                <p>Perfect for trying out Ibis Portal chapters.</p>
+              </div>
+              <span className="pricing-stolen-badge">
+                Most Flexible
+              </span>
+            </div>
+
+            <div className="pricing-stolen-price-area">
+              <span className="pricing-stolen-price">₹{starterPrice.toLocaleString('en-IN')}</span>
+              <span className="pricing-stolen-period">/month</span>
+            </div>
+
+            <button className="pricing-stolen-btn pricing-stolen-btn-light">
+              Get Started
+              <ArrowRight size={18} />
+            </button>
+          </div>
+
+          <div className="pricing-stolen-bottom-light">
+            <div className="pricing-stolen-features">
+              {starterFeatures.map((feature, idx) => (
+                <div 
+                  key={idx} 
+                  className={`pricing-stolen-feature-item ${feature.enabled ? "" : "disabled"}`}
+                >
+                  {feature.enabled ? (
+                    <LightCheckIcon className="flex-shrink-0" />
+                  ) : (
+                    <Lock size={14} className="flex-shrink-0" style={{ color: "rgba(32, 22, 17, 0.4)" }} />
+                  )}
+                  <span className="pricing-stolen-feature-text">{feature.text}</span>
+                </div>
+              ))}
+            </div>
+            <ToggleSwitch 
+              enabled={starterFast} 
+              onChange={setStarterFast} 
+              label="Mentor doubt chat (+₹499)" 
+            />
+          </div>
+        </div>
+
+        {/* Pro Card (12-Month Access) */}
+        <div className="pricing-stolen-card-dark">
+          <div className="pricing-stolen-inner-dark">
+            <div className="pricing-stolen-header">
+              <div className="pricing-stolen-title-area">
+                <h2>12-Month</h2>
+                <p>Unlock complete access to the full platform.</p>
+              </div>
+              <span className="pricing-stolen-badge">
+                Best Value
+              </span>
+            </div>
+
+            <div className="pricing-stolen-price-area">
+              <span className="pricing-stolen-price">₹{proPrice.toLocaleString('en-IN')}</span>
+              <span className="pricing-stolen-period">/year</span>
+            </div>
+
+            <button className="pricing-stolen-btn pricing-stolen-btn-dark">
+              Enroll Now
+              <AcademicHatIcon />
+            </button>
+          </div>
+
+          <div className="pricing-stolen-bottom-dark">
+            <div className="pricing-stolen-features">
+              {proFeatures.map((feature, idx) => (
+                <div 
+                  key={idx} 
+                  className={`pricing-stolen-feature-item ${feature.enabled ? "" : "disabled"}`}
+                >
+                  {feature.enabled ? (
+                    <DarkCheckIcon className="flex-shrink-0" />
+                  ) : (
+                    <Lock size={14} className="flex-shrink-0" style={{ color: "rgba(250, 248, 245, 0.4)" }} />
+                  )}
+                  <span className="pricing-stolen-feature-text">{feature.text}</span>
+                </div>
+              ))}
+            </div>
+            <ToggleSwitch 
+              enabled={proFast} 
+              onChange={setProFast} 
+              isDark 
+              label="Printed prep books (+₹1,999)" 
+            />
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function PlanCard({ icon, title, badge, copy, cta, featured = false, onClick }) {
-  return (
-    <GradientBlobCard className={`plan-card ${featured ? "featured" : ""}`}>
-      <div className="plan-card-inner" style={{ display: "flex", flexDirection: "column", gap: "18px", height: "100%" }}>
-        <div>
-          <Pill tone={featured ? "accent" : "neutral"}>{badge}</Pill>
-        </div>
-        <span className="plan-icon">{icon}</span>
-        <h2 style={{ margin: 0, fontFamily: "var(--display)", fontSize: "2.4rem", lineHeight: 1.1 }}>{title}</h2>
-        <p style={{ margin: 0, flex: 1, minHeight: "80px", lineHeight: "1.6" }}>{copy}</p>
-        {featured ? (
-          <ShinyButton onClick={onClick} style={{ width: "100%", display: "flex", justifyContent: "center" }}>{cta}</ShinyButton>
-        ) : (
-          <AnimatedLayerButton onClick={onClick} style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-            <span>{cta}</span>
-          </AnimatedLayerButton>
-        )}
-      </div>
-    </GradientBlobCard>
-  );
-}
-
 createRoot(document.getElementById("root")).render(<App />);
+

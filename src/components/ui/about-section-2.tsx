@@ -1,5 +1,6 @@
 import { TimelineContent } from "./timeline-animation";
 import { RainbowButton } from "./rainbow-button";
+import { AwardBadge } from "./award-badge";
 import { useRef } from "react";
 
 export default function AboutSection2() {
@@ -122,29 +123,16 @@ export default function AboutSection2() {
               , and make top-tier mentoring accessible.
             </TimelineContent>
 
-            <div style={{ marginTop: "28px" }}>
+            <div style={{ marginTop: "32px" }}>
               <TimelineContent
                 as="div"
                 animationNum={4}
                 timelineRef={heroRef}
                 customVariants={textVariants}
-                style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}
+                style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-start" }}
               >
-                <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #00f2fe, #4facfe, #00f2fe, #4facfe, #00f2fe)" }}>
-                  M.Sc., M.Phil & B.Ed. (Harvard L&M)
-                </RainbowButton>
-                <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #ff0844, #ffb199, #ff0844, #ffb199, #ff0844)" }}>
-                  Science Workshops
-                </RainbowButton>
-                <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #f6d365, #fda085, #f6d365, #fda085, #f6d365)" }}>
-                  Teacher Training
-                </RainbowButton>
-                <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #f5576c, #f093fb, #f5576c, #f093fb, #f5576c)" }}>
-                  Harvard Leadership
-                </RainbowButton>
-                <RainbowButton style={{ "--border-gradient": "linear-gradient(45deg, #a18cd1, #fbc2eb, #a18cd1, #fbc2eb, #a18cd1)" }}>
-                  JEE/NEET Pedagogy
-                </RainbowButton>
+                <AwardBadge type="cbse-coaching" variant="transparent" />
+                <AwardBadge type="harvard-leadership" variant="transparent" />
               </TimelineContent>
             </div>
           </div>
