@@ -165,6 +165,123 @@ const AnimatedMeshBackground = () => (
   </div>
 );
 
+const isMobileOrTablet = typeof navigator !== "undefined" && (
+  /Mobi|Android|iPhone|iPad|Macintosh/i.test(navigator.userAgent) && 
+  (navigator.maxTouchPoints > 0 || (navigator.userAgent.includes("Macintosh") && "ontouchend" in document))
+);
+
+function ScaleRotateWrapper({ children, needsScale, isPortrait, isEmbedded }) {
+  const [scale, setScale] = useState(1);
+  const [height, setHeight] = useState(720);
+  const [forceRotate, setForceRotate] = useState(false);
+
+  useEffect(() => {
+    if (isEmbedded || !needsScale) return;
+
+    const handleResize = () => {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const designW = 1280;
+
+      if (isPortrait && !forceRotate) {
+        setScale(1);
+        setHeight(720);
+        return;
+      }
+
+      const availW = (isPortrait && forceRotate) ? H : W;
+      const availH = (isPortrait && forceRotate) ? W : H;
+
+      // Scale based strictly on width to fill the screen width 100% on mobile/tablets
+      const newScale = (isMobileOrTablet || isPortrait) ? (availW / designW) : Math.min(availW / designW, 1);
+      setScale(newScale);
+
+      // Calculate dynamic height to match the device aspect ratio exactly, avoiding letterboxing
+      const calculatedHeight = availH / newScale;
+      setHeight(calculatedHeight);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
+  }, [forceRotate, isEmbedded, needsScale, isPortrait]);
+
+  if (isEmbedded) {
+    return <div className="embedded-content-frame">{children}</div>;
+  }
+
+  if (!needsScale) {
+    return <>{children}</>;
+  }
+
+  if (isPortrait && !forceRotate) {
+    return (
+      <div className="portrait-lock-screen">
+        <div className="portrait-lock-card">
+          <div className="portrait-lock-logo">
+            <img src="/ibis-assets/logo.webp?v=20260626" alt="Ibis Physics" />
+          </div>
+          <h2>Landscape Mode Recommended</h2>
+          <p>
+            This portal is optimized for desktop and landscape widescreen viewing to provide a premium interactive simulation experience.
+          </p>
+          <button 
+            type="button" 
+            className="portrait-rotate-btn" 
+            onClick={() => setForceRotate(true)}
+          >
+            Enter Landscape View
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const iframeUrl = window.location.origin + window.location.pathname + "?embedded=true";
+
+  const containerStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "1280px",
+    height: `${height}px`,
+    transform: `translate(-50%, -50%) ${isPortrait && forceRotate ? "rotate(90deg)" : ""} scale(${scale})`,
+    transformOrigin: "center center",
+    border: "none",
+    overflow: "hidden",
+    boxShadow: "0 24px 70px rgba(0, 0, 0, 0.45)",
+    borderRadius: "24px",
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
+  };
+
+  return (
+    <div className="global-scale-viewport">
+      {isPortrait && forceRotate && (
+        <button 
+          type="button" 
+          className="exit-rotation-btn" 
+          onClick={() => setForceRotate(false)}
+        >
+          Exit Widescreen
+        </button>
+      )}
+      <iframe 
+        src={iframeUrl} 
+        style={containerStyle} 
+        title="Ibis Portal Widescreen View" 
+        scrolling="no"
+      />
+    </div>
+  );
+}
+
+
 function App() {
   const [screen, setScreen] = useState("landing");
   const [pricingSource, setPricingSource] = useState("signup");
@@ -177,6 +294,25 @@ function App() {
   const [paywall, setPaywall] = useState(false);
   const [access, setAccess] = useState("trial");
   const [legalPage, setLegalPage] = useState("privacy");
+  const [isPortrait, setIsPortrait] = useState(false);
+  const [needsScale, setNeedsScale] = useState(false);
+  
+  const isEmbedded = useMemo(() => {
+    return new URLSearchParams(window.location.search).get("embedded") === "true";
+  }, []);
+
+  useEffect(() => {
+    if (isEmbedded) return;
+    const handleResize = () => {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      setIsPortrait(H > W);
+      setNeedsScale(isMobileOrTablet || H > W || W < 1280 || H < 720);
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isEmbedded]);
 
   const activeChapter = chapters[chapterIndex] || chapters[0];
 
@@ -208,85 +344,93 @@ function App() {
     setScreen("chapter");
   };
 
+  const showBackground = isEmbedded || !needsScale;
+
   return (
     <main>
-      <AnimatedMeshBackground />
-      {screen === "landing" && (
-        <Landing
-          chapters={chapters}
-          chapterIndex={chapterIndex}
-          setChapterIndex={setChapterIndex}
-          onTrial={() => enterPortal("trial")}
-          onStart={() => { setPricingSource("signup"); setScreen("signup"); }}
-          onAdmin={() => setScreen("admin")}
-          onWhyIbis={() => setScreen("why-ibis")}
-          onPricing={() => { setPricingSource("landing"); setScreen("checkout"); }}
-        />
-      )}
+      {showBackground && <AnimatedMeshBackground />}
+      <ScaleRotateWrapper
+        needsScale={needsScale}
+        isPortrait={isPortrait}
+        isEmbedded={isEmbedded}
+      >
+        {screen === "landing" && (
+          <Landing
+            chapters={chapters}
+            chapterIndex={chapterIndex}
+            setChapterIndex={setChapterIndex}
+            onTrial={() => enterPortal("trial")}
+            onStart={() => { setPricingSource("signup"); setScreen("signup"); }}
+            onAdmin={() => setScreen("admin")}
+            onWhyIbis={() => setScreen("why-ibis")}
+            onPricing={() => { setPricingSource("landing"); setScreen("checkout"); }}
+          />
+        )}
 
-      {screen === "why-ibis" && (
-        <WhyIbisView onBack={() => setScreen("landing")} />
-      )}
+        {screen === "why-ibis" && (
+          <WhyIbisView onBack={() => setScreen("landing")} />
+        )}
 
-      {screen === "student" && (
-        <StudentPortal
-          access={access}
-          chapters={chapters}
-          chapterIndex={chapterIndex}
-          setChapterIndex={setChapterIndex}
-          switchChapter={switchChapter}
-          openChapter={openChapter}
-          onBatch={() => setBatchOpen(true)}
-          onLogout={() => setScreen("landing")}
-          showPaywall={paywall}
-          onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
-          onClosePaywall={() => setPaywall(false)}
-        />
-      )}
+        {screen === "student" && (
+          <StudentPortal
+            access={access}
+            chapters={chapters}
+            chapterIndex={chapterIndex}
+            setChapterIndex={setChapterIndex}
+            switchChapter={switchChapter}
+            openChapter={openChapter}
+            onBatch={() => setBatchOpen(true)}
+            onLogout={() => setScreen("landing")}
+            showPaywall={paywall}
+            onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
+            onClosePaywall={() => setPaywall(false)}
+          />
+        )}
 
-      {screen === "chapter" && (
-        <ChapterView
-          chapter={activeChapter}
-          access={access}
-          topicIndex={topicIndex}
-          setTopicIndex={setTopicIndex}
-          tab={tab}
-          setTab={setTab}
-          onBack={() => setScreen("student")}
-          onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
-        />
-      )}
+        {screen === "chapter" && (
+          <ChapterView
+            chapter={activeChapter}
+            access={access}
+            topicIndex={topicIndex}
+            setTopicIndex={setTopicIndex}
+            tab={tab}
+            setTab={setTab}
+            onBack={() => setScreen("student")}
+            onPay={() => { setPricingSource("signup"); setScreen("signup"); }}
+          />
+        )}
 
-      {screen === "admin" && (
-        <AdminPanel
-          chapters={chapters}
-          setChapters={setChapters}
-          chapterIndex={chapterIndex}
-          setChapterIndex={setChapterIndex}
-          topicIndex={topicIndex}
-          setTopicIndex={setTopicIndex}
-          activeTab={adminTab}
-          setActiveTab={setAdminTab}
-          onBatch={() => setScreen("batches")}
-          onLogout={() => setScreen("landing")}
-        />
-      )}
+        {screen === "admin" && (
+          <AdminPanel
+            chapters={chapters}
+            setChapters={setChapters}
+            chapterIndex={chapterIndex}
+            setChapterIndex={setChapterIndex}
+            topicIndex={topicIndex}
+            setTopicIndex={setTopicIndex}
+            activeTab={adminTab}
+            setActiveTab={setAdminTab}
+            onBatch={() => setScreen("batches")}
+            onLogout={() => setScreen("landing")}
+          />
+        )}
 
-      {screen === "batches" && <BatchControl onBack={() => setScreen("admin")} />}
-      {screen === "signup" && (
-        <Signup
-          onBack={() => setScreen("landing")}
-          onPay={() => { setPricingSource("signup"); setScreen("checkout"); }}
-          onLogin={() => enterPortal("full")}
-          onLegal={(page) => {
-            setLegalPage(page);
-            setScreen("legal");
-          }}
-        />
-      )}
-      {screen === "legal" && <LegalInfoPage page={legalPage} onBack={() => setScreen("signup")} />}
-      {screen === "checkout" && <Checkout onBack={() => setScreen(pricingSource === "landing" ? "landing" : "signup")} onDone={() => enterPortal("full")} />}
-      {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} />}
+        {screen === "batches" && <BatchControl onBack={() => setScreen("admin")} />}
+        {screen === "signup" && (
+          <Signup
+            onBack={() => setScreen("landing")}
+            onPay={() => { setPricingSource("signup"); setScreen("checkout"); }}
+            onLogin={() => enterPortal("full")}
+            onLegal={(page) => {
+              setLegalPage(page);
+              setScreen("legal");
+            }}
+          />
+        )}
+        {screen === "legal" && <LegalInfoPage page={legalPage} onBack={() => setScreen("signup")} />}
+        {screen === "checkout" && <Checkout onBack={() => setScreen(pricingSource === "landing" ? "landing" : "signup")} onDone={() => enterPortal("full")} />}
+        {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} />}
+      </ScaleRotateWrapper>
     </main>
   );
 }
@@ -2977,22 +3121,16 @@ function Checkout({ onBack }) {
         <Brand compact />
       </div>
 
-      {/* Main Page Title */}
-      <div style={{ textAlign: "center", marginTop: "20px", marginBottom: "8px" }}>
-        <h1 style={{ 
-          fontFamily: "var(--poster)", 
-          fontSize: "clamp(2rem, 4vw, 2.8rem)", 
-          fontWeight: 800, 
-          margin: "0 0 8px 0", 
-          color: "#faf4eb",
-          letterSpacing: "-0.03em"
-        }}>
-          Choose Your <span style={{ fontFamily: "var(--handwriting)", color: "var(--cream)", fontWeight: 400, marginLeft: "4px", marginRight: "4px" }}>Perfect</span> Plan
-        </h1>
-        <p style={{ fontFamily: "var(--body)", fontSize: "14px", color: "rgba(250, 244, 235, 0.75)", margin: 0, maxWidth: "540px", display: "inline-block" }}>
-          Select the perfect access level to master physics with interactive simulations and structured learning.
-        </p>
-      </div>
+      <div className="checkout-content-wrapper">
+        {/* Main Page Title */}
+        <div className="pricing-heading">
+          <h1>
+            Choose Your <span>Perfect</span> Plan
+          </h1>
+          <p>
+            Select the perfect access level to master physics with interactive simulations and structured learning.
+          </p>
+        </div>
 
       {/* Cards Grid */}
       <div className="pricing-stolen-grid">
@@ -3093,8 +3231,9 @@ function Checkout({ onBack }) {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </div>
+  </section>
+);
 }
 
 createRoot(document.getElementById("root")).render(<App />);

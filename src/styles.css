@@ -6996,11 +6996,22 @@ main,
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 80px 24px 40px;
+  padding: 40px 24px 20px;
   box-sizing: border-box;
   background: transparent !important;
   color: var(--ink) !important;
   overflow-y: auto !important;
+}
+
+.checkout-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: auto 0;
+  padding-top: 72px; /* safe spacing for absolute top bar */
+  box-sizing: border-box;
+  z-index: 1;
 }
 
 .checkout-top-bar {
@@ -7030,7 +7041,7 @@ main,
   gap: 20px;
   width: 100%;
   max-width: 940px;
-  margin: 28px auto 0 auto;
+  margin: 14px auto 0 auto;
   box-sizing: border-box;
 }
 
@@ -7068,7 +7079,7 @@ main,
 
 .pricing-stolen-inner-light {
   border-radius: 16px;
-  padding: 24px;
+  padding: 16px 20px;
   margin-bottom: 8px;
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
@@ -7080,7 +7091,7 @@ main,
 
 .pricing-stolen-inner-dark {
   border-radius: 16px;
-  padding: 24px;
+  padding: 16px 20px;
   margin-bottom: 8px;
   background-color: rgba(32, 22, 17, 0.75);
   backdrop-filter: blur(8px);
@@ -7160,7 +7171,7 @@ main,
 .pricing-stolen-price-area {
   display: flex;
   align-items: baseline;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .pricing-stolen-price {
@@ -7197,7 +7208,7 @@ main,
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  padding: 16px;
+  padding: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7395,6 +7406,201 @@ main,
 .pricing-stolen-card-dark .pricing-stolen-toggle-label {
   color: rgba(250, 248, 245, 0.65);
 }
+
+/* Global Viewport Scaling & Orientation Lock Styles */
+.global-scale-viewport {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Force container children to behave as 100% of container size instead of browser viewport */
+.global-scale-viewport .landing-screen,
+.global-scale-viewport .signup-screen,
+.global-scale-viewport .legal-screen,
+.global-scale-viewport .app-shell,
+.global-scale-viewport .learning-shell,
+.global-scale-viewport .admin-shell,
+.global-scale-viewport .batch-shell,
+.global-scale-viewport .checkout-flow,
+.global-scale-viewport .why-ibis-screen {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  left: 0 !important;
+  top: 0 !important;
+}
+
+/* Portrait Lock Screen Overlay */
+.portrait-lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at center, rgba(42, 30, 28, 0.58), rgba(20, 12, 10, 0.94));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #fff7ed;
+  font-family: var(--body);
+  text-align: center;
+}
+
+.portrait-lock-card {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  max-width: 320px;
+  padding: 38px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 72% 16%, rgba(255, 255, 255, 0.08), transparent 40%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01) 60%, rgba(255, 226, 188, 0.03));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 30px 70px rgba(0, 0, 0, 0.45);
+}
+
+.portrait-lock-logo img {
+  width: 68px;
+  height: auto;
+  filter: drop-shadow(0 6px 18px rgba(190, 106, 70, 0.35));
+}
+
+.portrait-lock-card h2 {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 1.38rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: #fffaf3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.portrait-lock-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 550;
+  line-height: 1.48;
+  color: rgba(255, 238, 222, 0.72);
+}
+
+.portrait-rotate-btn {
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #be6a46, #80402b 60%, #582415);
+  color: #ffffff;
+  padding: 11px 22px;
+  font-family: var(--body);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 10px 24px rgba(190, 106, 70, 0.3);
+}
+
+.portrait-rotate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 12px 28px rgba(190, 106, 70, 0.38);
+}
+
+.portrait-rotate-btn:active {
+  transform: translateY(1px);
+}
+
+.exit-rotation-btn {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 100000;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(42, 30, 28, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 235, 216, 0.88);
+  padding: 7px 13px;
+  font-family: var(--body);
+  font-size: 0.7rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 160ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.exit-rotation-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-0.5px);
+}
+
+.exit-rotation-btn:active {
+  transform: translateY(0.5px);
+}
+
+/* Embedded Widescreen Emulation Container */
+.embedded-content-frame {
+  width: 1280px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Suppress all scrollbars and margins inside the emulated viewport document */
+html:has(.embedded-content-frame),
+body:has(.embedded-content-frame) {
+  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Pricing Heading Styling */
+.pricing-heading {
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.pricing-heading h1 {
+  font-family: var(--poster);
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #faf4eb;
+  letter-spacing: -0.03em;
+}
+
+.pricing-heading h1 span {
+  font-family: var(--handwriting);
+  color: var(--cream);
+  font-weight: 400;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.pricing-heading p {
+  font-family: var(--body);
+  font-size: 14px;
+  color: rgba(250, 244, 235, 0.75);
+  margin: 0;
+  max-width: 540px;
+  display: inline-block;
+}
+
+
+
 
 
 
