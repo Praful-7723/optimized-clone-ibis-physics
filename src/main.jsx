@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { ShamayimToggleSwitch } from "./components/ui/switch";
-import { Badge } from "./components/ui/new-badge";
 import { TimelineContent } from "./components/ui/timeline-animation";
-import { RainbowButton } from "./components/ui/rainbow-button";
-import FaultyTerminal from "./components/ui/FaultyTerminal";
 import { AwardBadge } from "./components/ui/award-badge";
 import { createRoot } from "react-dom/client";
 import {
@@ -43,12 +40,12 @@ import {
   Zap
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import "./styles.css";
 
+const FaultyTerminal = React.lazy(() => import("./components/ui/FaultyTerminal"));
+const LatexDocument = React.lazy(() => import("./components/LatexDocument"));
 const assetBase = "/ibis-assets/hero-section-morphing-images/";
-const chapterAssetVersion = "20260626";
+const chapterAssetVersion = "20260626-webp";
 
 const chapterSeed = [
   ["Electric Charges and Fields", "ch01_electric_charges_and_fields_48837919.png"],
@@ -127,7 +124,7 @@ const buildTopic = (chapterId, topic, index) => ({
 const initialChapters = chapterSeed.map(([name, image], index) => ({
   id: index + 1,
   name,
-  image: `${assetBase}${image}?v=${chapterAssetVersion}`,
+  image: `${assetBase}${image.replace(".png", ".webp")}?v=${chapterAssetVersion}`,
   progress: [82, 66, 58, 41, 37, 29, 22, 18, 53, 47, 33, 24, 19, 14][index],
   topics: topicNames[index + 1].map((topic, topicIndex) => buildTopic(index + 1, topic, topicIndex))
 }));
@@ -157,72 +154,6 @@ function getYouTubeThumbnail(url) {
 
 function getYouTubeEmbed(url) {
   return `https://www.youtube.com/embed/${getYouTubeId(url)}?autoplay=1&rel=0`;
-}
-
-function escapeHtml(value = "") {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function renderMath(math, displayMode = false) {
-  return katex.renderToString(math, {
-    displayMode,
-    throwOnError: false,
-    strict: "ignore",
-    trust: false
-  });
-}
-
-function renderInlineLatex(text = "") {
-  let safe = escapeHtml(text);
-  safe = safe.replace(/\\textbf\{([^{}]+)\}/g, "<strong>$1</strong>");
-  safe = safe.replace(/\\emph\{([^{}]+)\}/g, "<em>$1</em>");
-  safe = safe.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => renderMath(math, false));
-  safe = safe.replace(/\$([^$\n]+?)\$/g, (_, math) => renderMath(math, false));
-  return safe;
-}
-
-function latexToBlocks(source = "") {
-  const normalized = source
-    .replace(/\\section\*?\{([^{}]+)\}/g, "\n\n@@SECTION:$1@@\n\n")
-    .replace(/\\subsection\*?\{([^{}]+)\}/g, "\n\n@@SUBSECTION:$1@@\n\n")
-    .replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => `\n\n@@MATH:${math.trim()}@@\n\n`)
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, math) => `\n\n@@MATH:${math.trim()}@@\n\n`);
-
-  return normalized
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      if (part.startsWith("@@SECTION:")) return { type: "section", value: part.slice(10, -2) };
-      if (part.startsWith("@@SUBSECTION:")) return { type: "subsection", value: part.slice(13, -2) };
-      if (part.startsWith("@@MATH:")) return { type: "math", value: part.slice(7, -2) };
-      return { type: "paragraph", value: part.replace(/\n+/g, " ") };
-    });
-}
-
-function paginateLatexBlocks(blocks, maxWeight = 1850) {
-  const pages = [];
-  let page = [];
-  let weight = 0;
-
-  blocks.forEach((block) => {
-    const blockWeight = block.value.length + (block.type === "math" ? 280 : block.type === "section" ? 180 : 80);
-    if (page.length && weight + blockWeight > maxWeight) {
-      pages.push(page);
-      page = [];
-      weight = 0;
-    }
-    page.push(block);
-    weight += blockWeight;
-  });
-
-  if (page.length) pages.push(page);
-  return pages.length ? pages : [[{ type: "paragraph", value: "Start typing LaTeX to preview notes." }]];
 }
 
 const AnimatedMeshBackground = () => (
@@ -363,7 +294,7 @@ function App() {
 function Brand({ admin = false, compact = false }) {
   return (
     <div className={`brand ${compact ? "compact" : ""}`}>
-      <img className="brand-logo" src="/ibis-assets/logo.png?v=3" alt="Ibis Physics" />
+      <img className="brand-logo" src="/ibis-assets/logo.webp?v=20260626" alt="Ibis Physics" decoding="async" />
       <span>
         {admin && <small>Admin Control</small>}
       </span>
@@ -587,6 +518,8 @@ function ChapterImage({ chapter, className = "" }) {
       className={`chapter-image ${className}`}
       src={chapter.image}
       alt={`${chapter.name} thumbnail`}
+      loading="lazy"
+      decoding="async"
       draggable="false"
     />
   );
@@ -653,6 +586,8 @@ function ChapterCardStack({
                     src={chapter.image}
                     alt={chapter.name}
                     className="card-stack-image"
+                    loading={stackIndex === 0 ? "eager" : "lazy"}
+                    decoding="async"
                     draggable="false"
                   />
                   {locked && stackIndex === 0 && <span className="lock-chip"><Lock size={15} /> Premium</span>}
@@ -882,15 +817,19 @@ function WhyIbisView({ onBack }) {
             onMouseMove={handleMouseMove}
           >
             <img
-              src="/ibis-assets/ganesh1.png"
+              src="/ibis-assets/ganesh1.webp?v=20260626"
               alt="Ganesh sketch portrait"
               className="mentor-img-base-full"
+              loading="lazy"
+              decoding="async"
               draggable="false"
             />
             <img
-              src="/ibis-assets/ganesh2.png"
+              src="/ibis-assets/ganesh2.webp?v=20260626"
               alt="Ganesh original portrait"
               className="mentor-img-reveal-full"
+              loading="lazy"
+              decoding="async"
               draggable="false"
             />
             <div className="reveal-lens-cursor-large" />
@@ -1059,7 +998,13 @@ function Landing({ chapters, chapterIndex, setChapterIndex, onTrial, onStart, on
 
         <section className="hero-subject-showcase">
           <div className="subject-card">
-            <img src="/ibis-assets/herosubject.png?v=3" alt="Physics Subject Illustration" className="subject-image" />
+            <img
+              src="/ibis-assets/herosubject.webp?v=20260626"
+              alt="Physics Subject Illustration"
+              className="subject-image"
+              fetchPriority="high"
+              decoding="async"
+            />
           </div>
         </section>
       </div>
@@ -1161,7 +1106,14 @@ function StudentChapterShowcase({
             key={activeChapter.id}
             className={`student-feature-chapter-card ${directionClass} ${activeLocked ? "locked" : ""}`}
           >
-            <img className="student-feature-image" src={activeChapter.image} alt={`${activeChapter.name} thumbnail`} draggable={false} />
+            <img
+              className="student-feature-image"
+              src={activeChapter.image}
+              alt={`${activeChapter.name} thumbnail`}
+              loading="eager"
+              decoding="async"
+              draggable={false}
+            />
             <div className="student-feature-scrim" />
             {activeLocked && (
               <span className="student-feature-lock"><Lock size={15} /> Full access</span>
@@ -1772,7 +1724,9 @@ function NotesTab({ topic }) {
   return (
     <div className="pdf-panel">
       {note.type === "latex" ? (
-        <LatexDocument title={note.title} source={note.content} />
+        <React.Suspense fallback={<LatexFallback />}>
+          <LatexDocument title={note.title} source={note.content} />
+        </React.Suspense>
       ) : (
         <>
           <div className="pdf-toolbar">
@@ -1795,62 +1749,17 @@ function NotesTab({ topic }) {
   );
 }
 
-function LatexDocument({ title, source, compact = false }) {
-  const [pageIndex, setPageIndex] = useState(0);
-  const pages = useMemo(() => paginateLatexBlocks(latexToBlocks(source), compact ? 1050 : 1850), [source, compact]);
-  const activeIndex = Math.min(pageIndex, pages.length - 1);
-  const activePage = pages[activeIndex];
-
-  useEffect(() => {
-    setPageIndex(0);
-  }, [source]);
-
+function LatexFallback({ compact = false }) {
   return (
-    <section className={`latex-document ${compact ? "compact" : ""}`}>
+    <section className={`latex-document ${compact ? "compact" : ""}`} aria-busy="true">
       <div className="pdf-toolbar">
-        <Button
-          className="icon-btn"
-          aria-label="Previous LaTeX page"
-          disabled={activeIndex === 0}
-          onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
-        >
-          <ArrowLeft size={16} />
-        </Button>
-        <span>{title} · page {activeIndex + 1} of {pages.length}</span>
-        <Button
-          className="icon-btn"
-          aria-label="Next LaTeX page"
-          disabled={activeIndex === pages.length - 1}
-          onClick={() => setPageIndex((value) => Math.min(pages.length - 1, value + 1))}
-        >
-          <ArrowRight size={16} />
-        </Button>
-        {!compact && (
-          <div className="toolbar-end">
-            <Button className="icon-btn" aria-label="Zoom in"><ZoomIn size={16} /></Button>
-            <Button className="icon-btn" aria-label="Zoom out"><ZoomOut size={16} /></Button>
-            <Button className="icon-btn" aria-label="Download"><Download size={16} /></Button>
-          </div>
-        )}
+        <span>Loading notes preview...</span>
       </div>
       <article className="latex-page">
-        {activePage.map((block, index) => <LatexBlock block={block} key={`${block.type}-${index}`} />)}
+        <p>Preparing LaTeX renderer.</p>
       </article>
     </section>
   );
-}
-
-function LatexBlock({ block }) {
-  if (block.type === "section") {
-    return <h2 dangerouslySetInnerHTML={{ __html: renderInlineLatex(block.value) }} />;
-  }
-  if (block.type === "subsection") {
-    return <h3 dangerouslySetInnerHTML={{ __html: renderInlineLatex(block.value) }} />;
-  }
-  if (block.type === "math") {
-    return <div className="latex-math" dangerouslySetInnerHTML={{ __html: renderMath(block.value, true) }} />;
-  }
-  return <p dangerouslySetInnerHTML={{ __html: renderInlineLatex(block.value) }} />;
 }
 
 function TestTab() {
@@ -2041,7 +1950,7 @@ function AdminRow({ title, subtitle, image, active, onSelect, onRename, onUp, on
 
   return (
     <article className={`admin-row ${active ? "active" : ""}`} title={title}>
-      {image && <img src={image} alt="" />}
+      {image && <img src={image} alt="" loading="lazy" decoding="async" />}
       <button className="row-main" onClick={onSelect}>
         {editing ? (
           <input
@@ -2212,7 +2121,9 @@ function AdminNotes({ topic, updateTopic }) {
       </section>
       <article className="latex-preview">
         <strong>Live preview</strong>
-        <LatexDocument title={`${topic.name} preview`} source={latex} compact />
+        <React.Suspense fallback={<LatexFallback compact />}>
+          <LatexDocument title={`${topic.name} preview`} source={latex} compact />
+        </React.Suspense>
       </article>
       <div className="note-list">
         {topic.notes.map((note) => (
@@ -2686,23 +2597,25 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
         </defs>
       </svg>
       <div className="auth-terminal-bg" aria-hidden="true">
-        <FaultyTerminal
-          scale={1.5}
-          gridMul={[2, 1]}
-          digitSize={1.2}
-          timeScale={0.5}
-          scanlineIntensity={0.5}
-          glitchAmount={1}
-          flickerAmount={1}
-          noiseAmp={1}
-          chromaticAberration={0}
-          dither={0}
-          curvature={0.1}
-          tint="#9b3f24"
-          mouseStrength={0.5}
-          brightness={0.72}
-          transparent
-        />
+        <React.Suspense fallback={<span className="auth-terminal-fallback" />}>
+          <FaultyTerminal
+            scale={1.5}
+            gridMul={[2, 1]}
+            digitSize={1.2}
+            timeScale={0.5}
+            scanlineIntensity={0.5}
+            glitchAmount={1}
+            flickerAmount={1}
+            noiseAmp={1}
+            chromaticAberration={0}
+            dither={0}
+            curvature={0.1}
+            tint="#9b3f24"
+            mouseStrength={0.5}
+            brightness={0.72}
+            transparent
+          />
+        </React.Suspense>
       </div>
       <div className="signup-shell">
         <div className="signup-visual-panel">
@@ -3178,4 +3091,3 @@ function Checkout({ onBack }) {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-

@@ -200,7 +200,8 @@ export default function FaultyTerminal({
   tint = "#ffffff",
   mouseReact = true,
   mouseStrength = 0.2,
-  dpr = Math.min(window.devicePixelRatio || 1, 2),
+  dpr = 1,
+  frameRate = 24,
   pageLoadAnimation = true,
   brightness = 1,
   transparent = false,
@@ -232,7 +233,7 @@ export default function FaultyTerminal({
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const renderer = new Renderer({ dpr, alpha: true });
+    const renderer = new Renderer({ dpr: Math.min(dpr, 1.25), alpha: true });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, transparent ? 0 : 1);
     if (transparent) {
@@ -279,8 +280,27 @@ export default function FaultyTerminal({
     resizeObserver.observe(container);
     resize();
 
+    let destroyed = false;
+    let isVisible = true;
+    let lastFrame = 0;
+    const frameInterval = 1000 / Math.max(1, frameRate);
+    const canAnimate = () => !destroyed && !pause && isVisible && document.visibilityState !== "hidden";
+
+    const requestNextFrame = () => {
+      if (!rafRef.current && canAnimate()) {
+        rafRef.current = requestAnimationFrame(update);
+      }
+    };
+
     const update = (time) => {
-      rafRef.current = requestAnimationFrame(update);
+      rafRef.current = 0;
+      if (!canAnimate()) return;
+
+      if (time - lastFrame < frameInterval) {
+        requestNextFrame();
+        return;
+      }
+      lastFrame = time;
 
       if (pageLoadAnimation && loadAnimationStartRef.current === 0) {
         loadAnimationStartRef.current = time;
@@ -308,15 +328,32 @@ export default function FaultyTerminal({
       }
 
       renderer.render({ scene: mesh });
+      requestNextFrame();
     };
 
-    rafRef.current = requestAnimationFrame(update);
+    const handleVisibilityChange = () => {
+      requestNextFrame();
+    };
+
     container.appendChild(gl.canvas);
     if (mouseReact) container.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const intersectionObserver = new IntersectionObserver(([entry]) => {
+      isVisible = entry?.isIntersecting ?? true;
+      requestNextFrame();
+    });
+    intersectionObserver.observe(container);
+    renderer.render({ scene: mesh });
+    requestNextFrame();
 
     return () => {
+      destroyed = true;
       cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (mouseReact) container.removeEventListener("mousemove", handleMouseMove);
       if (gl.canvas.parentElement === container) container.removeChild(gl.canvas);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
@@ -325,6 +362,7 @@ export default function FaultyTerminal({
     };
   }, [
     dpr,
+    frameRate,
     pause,
     timeScale,
     scale,

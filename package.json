@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "optimize-assets": "node scripts/optimize-assets.mjs",
+    "predev": "npm run optimize-assets",
     "dev": "vite --host 0.0.0.0 --port 3002",
+    "prebuild": "npm run optimize-assets",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
@@ -21,6 +24,7 @@
     "vite": "latest"
   },
   "devDependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "^1.61.1",
+    "sharp": "^0.35.2"
   }
 }
