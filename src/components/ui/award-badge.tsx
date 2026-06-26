@@ -79,12 +79,11 @@ const badgeConfig = {
 
 export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadgeProps) => {
   const ref = useRef<HTMLAnchorElement>(null);
-  const [firstOverlayPosition, setFirstOverlayPosition] = useState<number>(0);
-  const [matrix, setMatrix] = useState<string>(identityMatrix);
-  const [currentMatrix, setCurrentMatrix] = useState<string>(identityMatrix);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
+  const canTrackRef = useRef<boolean>(false);
   const [disableInOutOverlayAnimation, setDisableInOutOverlayAnimation] = useState<boolean>(true);
   const [disableOverlayAnimation, setDisableOverlayAnimation] = useState<boolean>(false);
-  const [isTimeoutFinished, setIsTimeoutFinished] = useState<boolean>(false);
   const enterTimeout = useRef<NodeJS.Timeout | null>(null);
   const leaveTimeout1 = useRef<NodeJS.Timeout | null>(null);
   const leaveTimeout2 = useRef<NodeJS.Timeout | null>(null);
@@ -189,45 +188,61 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
     enterTimeout.current = setTimeout(() => setDisableInOutOverlayAnimation(true), 350);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        setFirstOverlayPosition((Math.abs(xCenter - e.clientX) + Math.abs(yCenter - e.clientY)) / 1.5);
+        cardRef.current?.style.setProperty("--award-overlay", `${(Math.abs(xCenter - e.clientX) + Math.abs(yCenter - e.clientY)) / 1.5}deg`);
       });
     });
 
     const matrix = getMatrix(e.clientX, e.clientY);
     const oppositeMatrix = getOppositeMatrix(matrix, e.clientY, true);
 
-    setMatrix(oppositeMatrix);
-    setIsTimeoutFinished(false);
+    if (cardRef.current) {
+      cardRef.current.style.transform = `perspective(700px) matrix3d(${oppositeMatrix})`;
+    }
+    canTrackRef.current = false;
     setTimeout(() => {
-      setIsTimeoutFinished(true);
+      canTrackRef.current = true;
     }, 200);
   };
 
   const onMouseMove = (e: MouseEvent<HTMLAnchorElement>) => {
-    const { left, right, top, bottom } = getDimensions();
-    const xCenter = (left + right) / 2;
-    const yCenter = (top + bottom) / 2;
+    const card = cardRef.current;
+    if (!card) return;
+    const { clientX, clientY } = e;
+    if (rafRef.current) return;
 
-    setTimeout(() => setFirstOverlayPosition((Math.abs(xCenter - e.clientX) + Math.abs(yCenter - e.clientY)) / 1.5), 150);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      const { left, right, top, bottom } = getDimensions();
+      const xCenter = (left + right) / 2;
+      const yCenter = (top + bottom) / 2;
+      card.style.setProperty("--award-overlay", `${(Math.abs(xCenter - clientX) + Math.abs(yCenter - clientY)) / 1.5}deg`);
 
-    if (isTimeoutFinished) {
-      setCurrentMatrix(getMatrix(e.clientX, e.clientY));
-    }
+      if (canTrackRef.current) {
+        card.style.transform = `perspective(700px) matrix3d(${getMatrix(clientX, clientY)})`;
+      }
+    });
   };
 
   const onMouseLeave = (e: MouseEvent<HTMLAnchorElement>) => {
-    const oppositeMatrix = getOppositeMatrix(matrix, e.clientY);
+    const card = cardRef.current;
+    const currentTransform = card?.style.transform.match(/matrix3d\((.+)\)/)?.[1] || identityMatrix;
+    const oppositeMatrix = getOppositeMatrix(currentTransform, e.clientY);
 
     if (enterTimeout.current) clearTimeout(enterTimeout.current);
+    canTrackRef.current = false;
 
-    setCurrentMatrix(oppositeMatrix);
-    setTimeout(() => setCurrentMatrix(identityMatrix), 200);
+    if (card) {
+      card.style.transform = `perspective(700px) matrix3d(${oppositeMatrix})`;
+      setTimeout(() => {
+        card.style.transform = `perspective(700px) matrix3d(${identityMatrix})`;
+      }, 200);
+    }
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setDisableInOutOverlayAnimation(false);
-        leaveTimeout1.current = setTimeout(() => setFirstOverlayPosition(-firstOverlayPosition / 4), 150);
-        leaveTimeout2.current = setTimeout(() => setFirstOverlayPosition(0), 300);
+        leaveTimeout1.current = setTimeout(() => card?.style.setProperty("--award-overlay", "-8deg"), 150);
+        leaveTimeout2.current = setTimeout(() => card?.style.setProperty("--award-overlay", "0deg"), 300);
         leaveTimeout3.current = setTimeout(() => {
           setDisableOverlayAnimation(false);
           setDisableInOutOverlayAnimation(true);
@@ -237,10 +252,14 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
   };
 
   useEffect(() => {
-    if (isTimeoutFinished) {
-      setMatrix(currentMatrix);
-    }
-  }, [currentMatrix, isTimeoutFinished]);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (enterTimeout.current) clearTimeout(enterTimeout.current);
+      if (leaveTimeout1.current) clearTimeout(leaveTimeout1.current);
+      if (leaveTimeout2.current) clearTimeout(leaveTimeout2.current);
+      if (leaveTimeout3.current) clearTimeout(leaveTimeout3.current);
+    };
+  }, []);
 
   const overlayAnimations = [...Array(10).keys()].map((e) => (
     `
@@ -313,10 +332,12 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
         {overlayAnimations}
       </style>
       <div
+        ref={cardRef}
         style={{
-          transform: `perspective(700px) matrix3d(${matrix})`,
+          transform: `perspective(700px) matrix3d(${identityMatrix})`,
           transformOrigin: "center center",
           transition: "transform 200ms ease-out",
+          ["--award-overlay" as string]: "0deg",
           backdropFilter: isTransparent ? "blur(12px)" : "none",
           WebkitBackdropFilter: isTransparent ? "blur(12px)" : "none",
           borderRadius: "10px",
@@ -359,7 +380,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
           </g>
           <g style={{ mixBlendMode: "overlay" }} mask="url(#badgeMask)">
             <g style={{
-              transform: `rotate(${firstOverlayPosition}deg)`,
+              transform: "rotate(var(--award-overlay, 0deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation1 5s infinite",
@@ -368,7 +389,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen1} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 10}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 10deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation2 5s infinite",
@@ -377,7 +398,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen2} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 20}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 20deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation3 5s infinite",
@@ -386,7 +407,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen3} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 30}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 30deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation4 5s infinite",
@@ -395,7 +416,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen4} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 40}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 40deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation5 5s infinite",
@@ -404,7 +425,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen5} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 50}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 50deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation6 5s infinite",
@@ -413,7 +434,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen6} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 60}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 60deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation7 5s infinite",
@@ -422,7 +443,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill={fills.sheen7} filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 70}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 70deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation8 5s infinite",
@@ -431,7 +452,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill="transparent" filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 80}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 80deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation9 5s infinite",
@@ -440,7 +461,7 @@ export const AwardBadge = ({ type, place, link, variant = "colored" }: AwardBadg
               <polygon points="0,0 260,54 260,0 0,54" fill="transparent" filter="url(#blur1)" opacity="0.45" />
             </g>
             <g style={{
-              transform: `rotate(${firstOverlayPosition + 90}deg)`,
+              transform: "rotate(calc(var(--award-overlay, 0deg) + 90deg))",
               transformOrigin: "center center",
               transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
               animation: disableOverlayAnimation ? "none" : "overlayAnimation10 5s infinite",

@@ -2425,7 +2425,9 @@ textarea {
   position: relative;
   display: grid;
   gap: 9px;
-  width: min(398px, 100%);
+  width: 100%;
+  max-width: 398px;
+  justify-self: stretch;
   max-height: calc(100dvh - 88px);
   overflow: visible;
   border: 0;
@@ -2457,7 +2459,7 @@ textarea {
   top: 0;
   right: 0;
   display: flex;
-  gap: 3px;
+  gap: 0;
   border: 1px solid rgba(75, 45, 32, 0.1);
   border-radius: 18px;
   background:
@@ -2469,19 +2471,48 @@ textarea {
     0 12px 30px rgba(65, 36, 24, 0.12);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.auth-mode-tabs-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  width: calc(50% - 4px);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2c211f, #7f4b3c 55%, #ba6f54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 18px rgba(58, 32, 25, 0.2);
+  transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 1;
+}
+
+.auth-mode-tabs-slider.is-signup {
+  transform: translateX(0);
+}
+
+.auth-mode-tabs-slider.is-login {
+  transform: translateX(100%);
 }
 
 .auth-mode-tabs button {
+  position: relative;
+  z-index: 2;
   border: 0;
   border-radius: 14px;
-  background: transparent;
+  background: transparent !important;
   color: rgba(43, 28, 21, 0.56);
-  padding: 6px 10px;
+  padding: 6px 0;
+  width: 76px;
+  text-align: center;
   font-family: var(--body);
   font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.01em;
-  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  transition: color 180ms ease;
 }
 
 .auth-mode-tabs button:focus-visible {
@@ -2490,11 +2521,7 @@ textarea {
 }
 
 .auth-mode-tabs button.active {
-  color: #fff8ef;
-  background: linear-gradient(135deg, #2c211f, #7f4b3c 55%, #ba6f54);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 18px rgba(58, 32, 25, 0.2);
+  color: #fff8ef !important;
 }
 
 .signup-form-heading {
@@ -2573,46 +2600,6 @@ textarea {
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.auth-input-goo {
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: 999px;
-  opacity: 0;
-  filter: url("#auth-input-goo");
-  transform: scale(0.82);
-  transition: none;
-}
-
-.auth-input-goo-main {
-  width: 86px;
-  height: 34px;
-  left: 8px;
-  top: 50%;
-  background: rgba(151, 67, 46, 0.2);
-  transform: translateY(-50%) scale(0.82);
-}
-
-.auth-input-goo-orb {
-  width: 54px;
-  height: 54px;
-  right: -12px;
-  top: -18px;
-  background: rgba(255, 226, 188, 0.34);
-}
-
-.signup-glass-input:focus-within .auth-input-goo {
-  opacity: 1;
-}
-
-.signup-glass-input:focus-within .auth-input-goo-main {
-  transform: translateY(-50%) scale(1.05);
-}
-
-.signup-glass-input:focus-within .auth-input-goo-orb {
-  transform: scale(1);
-}
-
 .signup-glass-input > svg,
 .signup-glass-input > input,
 .signup-password-wrap button {
@@ -2621,28 +2608,27 @@ textarea {
 }
 
 .signup-glass-input:focus-within {
-  border-color: rgba(211, 113, 80, 0.52);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(255, 250, 242, 0.28)),
-    rgba(255, 255, 255, 0.4);
+  border-color: #be6a46;
+  background: rgba(255, 255, 255, 0.88);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 0 0 4px rgba(211, 113, 80, 0.1),
-    0 14px 34px rgba(64, 38, 25, 0.1),
-    0 0 26px rgba(151, 67, 46, 0.12);
+    0 0 0 3px rgba(190, 106, 70, 0.22),
+    0 10px 24px rgba(64, 38, 25, 0.08);
 }
 
 .signup-glass-input input {
-  width: 0;
-  flex: 1;
-  min-height: 37px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  padding: 0;
-  font-size: 0.82rem;
-  font-weight: 720;
+  width: 0 !important;
+  flex: 1 !important;
+  min-height: 37px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ink) !important;
+  padding: 0 !important;
+  font-size: 0.82rem !important;
+  font-weight: 720 !important;
 }
 
 .signup-glass-input input::placeholder {

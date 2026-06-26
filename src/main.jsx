@@ -461,24 +461,40 @@ function GradientBlobCard({ children, className = "", onClick }) {
 
 function ReflectiveTiltFrame({ children, className = "", featured = false }) {
   const frameRef = useRef(null);
-  const [matrix, setMatrix] = useState("1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1");
-  const [glare, setGlare] = useState({ x: 50, y: 18, active: false });
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleMove = (event) => {
     const node = frameRef.current;
     if (!node) return;
-    const rect = node.getBoundingClientRect();
-    const relX = (event.clientX - rect.left) / rect.width - 0.5;
-    const relY = (event.clientY - rect.top) / rect.height - 0.5;
-    const rotateX = (-relY * 0.16).toFixed(4);
-    const rotateY = (relX * 0.16).toFixed(4);
-    const rotateZ = (relX * 0.035).toFixed(4);
-    setMatrix(`1, 0, ${rotateY}, 0, ${rotateZ}, 1, ${rotateX}, 0, ${-rotateY}, ${-rotateX}, 1, 0, 0, 0, 0, 1`);
-    setGlare({
-      x: Math.round((event.clientX - rect.left) / rect.width * 100),
-      y: Math.round((event.clientY - rect.top) / rect.height * 100),
-      active: true
+    const { clientX, clientY } = event;
+    if (rafRef.current) return;
+
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = 0;
+      const rect = node.getBoundingClientRect();
+      const relX = (clientX - rect.left) / rect.width - 0.5;
+      const relY = (clientY - rect.top) / rect.height - 0.5;
+      const rotateX = (-relY * 0.16).toFixed(4);
+      const rotateY = (relX * 0.16).toFixed(4);
+      const rotateZ = (relX * 0.035).toFixed(4);
+      node.style.transform = `perspective(900px) matrix3d(1, 0, ${rotateY}, 0, ${rotateZ}, 1, ${rotateX}, 0, ${-rotateY}, ${-rotateX}, 1, 0, 0, 0, 0, 1)`;
+      node.style.setProperty("--glare-x", `${Math.round((clientX - rect.left) / rect.width * 100)}%`);
+      node.style.setProperty("--glare-y", `${Math.round((clientY - rect.top) / rect.height * 100)}%`);
+      node.style.setProperty("--glare-opacity", "1");
     });
+  };
+
+  const handleLeave = () => {
+    const node = frameRef.current;
+    if (!node) return;
+    node.style.transform = "perspective(900px) matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)";
+    node.style.setProperty("--glare-opacity", "0");
   };
 
   return (
@@ -486,16 +502,13 @@ function ReflectiveTiltFrame({ children, className = "", featured = false }) {
       ref={frameRef}
       className={`reflective-plan-frame ${featured ? "featured" : ""} ${className}`}
       onMouseMove={handleMove}
-      onMouseEnter={() => setGlare((current) => ({ ...current, active: true }))}
-      onMouseLeave={() => {
-        setMatrix("1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1");
-        setGlare((current) => ({ ...current, active: false }));
-      }}
+      onMouseEnter={() => frameRef.current?.style.setProperty("--glare-opacity", "1")}
+      onMouseLeave={handleLeave}
       style={{
-        transform: `perspective(900px) matrix3d(${matrix})`,
-        "--glare-x": `${glare.x}%`,
-        "--glare-y": `${glare.y}%`,
-        "--glare-opacity": glare.active ? 1 : 0
+        transform: "perspective(900px) matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)",
+        "--glare-x": "50%",
+        "--glare-y": "18%",
+        "--glare-opacity": 0
       }}
     >
       <div className="reflective-plan-card">
@@ -842,27 +855,39 @@ function WhyIbisView({ onBack }) {
 
 function PortalBadge() {
   const badgeRef = useRef(null);
-  const [tilt, setTilt] = useState("perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)");
-  const [overlay, setOverlay] = useState(0);
-  const [coords, setCoords] = useState({ x: 50, y: 50 });
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleMove = (event) => {
-    const rect = badgeRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
-    setTilt(`perspective(700px) rotateX(${-y * 7}deg) rotateY(${x * 8}deg) scale(0.99)`);
-    setOverlay((Math.abs(x) + Math.abs(y)) * 48);
-    setCoords({
-      x: ((event.clientX - rect.left) / rect.width) * 100,
-      y: ((event.clientY - rect.top) / rect.height) * 100
+    const node = badgeRef.current;
+    if (!node) return;
+    const { clientX, clientY } = event;
+    if (rafRef.current) return;
+
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = 0;
+      const rect = node.getBoundingClientRect();
+      const x = (clientX - rect.left) / rect.width - 0.5;
+      const y = (clientY - rect.top) / rect.height - 0.5;
+      node.style.transform = `perspective(700px) rotateX(${-y * 7}deg) rotateY(${x * 8}deg) scale(0.99)`;
+      node.style.setProperty("--badge-overlay", `${(Math.abs(x) + Math.abs(y)) * 48}deg`);
+      node.style.setProperty("--mx", `${((clientX - rect.left) / rect.width) * 100}%`);
+      node.style.setProperty("--my", `${((clientY - rect.top) / rect.height) * 100}%`);
     });
   };
 
   const handleLeave = () => {
-    setTilt("perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)");
-    setOverlay(0);
-    setCoords({ x: 50, y: 50 });
+    const node = badgeRef.current;
+    if (!node) return;
+    node.style.transform = "perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)";
+    node.style.setProperty("--badge-overlay", "0deg");
+    node.style.setProperty("--mx", "50%");
+    node.style.setProperty("--my", "50%");
   };
 
   return (
@@ -872,10 +897,10 @@ function PortalBadge() {
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       style={{
-        transform: tilt,
-        "--badge-overlay": `${overlay}deg`,
-        "--mx": `${coords.x}%`,
-        "--my": `${coords.y}%`
+        transform: "perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)",
+        "--badge-overlay": "0deg",
+        "--mx": "50%",
+        "--my": "50%"
       }}
       aria-label="12th Physics Portal"
     >
@@ -2225,44 +2250,16 @@ function StudentRow({ student, expanded, onClick }) {
 }
 
 function Pupil({ size = 12, maxDistance = 5, pupilColor = "black", forceLookX, forceLookY }) {
-  const [mouseX, setMouseX] = useState(0);
-  const [mouseY, setMouseY] = useState(0);
-  const pupilRef = useRef(null);
-
-  useEffect(() => {
-    const handleMouseMove = (event) => {
-      setMouseX(event.clientX);
-      setMouseY(event.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!pupilRef.current) return { x: 0, y: 0 };
-    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
-
-    const pupil = pupilRef.current.getBoundingClientRect();
-    const pupilCenterX = pupil.left + pupil.width / 2;
-    const pupilCenterY = pupil.top + pupil.height / 2;
-    const deltaX = mouseX - pupilCenterX;
-    const deltaY = mouseY - pupilCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-    const angle = Math.atan2(deltaY, deltaX);
-
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance
-    };
+  const pupilPosition = {
+    x: forceLookX ?? 0,
+    y: forceLookY ?? 0
   };
-
-  const pupilPosition = calculatePupilPosition();
 
   return (
     <div
-      ref={pupilRef}
       className="signup-pupil"
+      data-max-distance={maxDistance}
+      data-force-look={forceLookX !== undefined && forceLookY !== undefined ? "true" : undefined}
       style={{
         width: `${size}px`,
         height: `${size}px`,
@@ -2283,44 +2280,15 @@ function EyeBall({
   forceLookX,
   forceLookY
 }) {
-  const [mouseX, setMouseX] = useState(0);
-  const [mouseY, setMouseY] = useState(0);
-  const eyeRef = useRef(null);
-
-  useEffect(() => {
-    const handleMouseMove = (event) => {
-      setMouseX(event.clientX);
-      setMouseY(event.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!eyeRef.current) return { x: 0, y: 0 };
-    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
-
-    const eye = eyeRef.current.getBoundingClientRect();
-    const eyeCenterX = eye.left + eye.width / 2;
-    const eyeCenterY = eye.top + eye.height / 2;
-    const deltaX = mouseX - eyeCenterX;
-    const deltaY = mouseY - eyeCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-    const angle = Math.atan2(deltaY, deltaX);
-
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance
-    };
+  const pupilPosition = {
+    x: forceLookX ?? 0,
+    y: forceLookY ?? 0
   };
-
-  const pupilPosition = calculatePupilPosition();
 
   return (
     <div
-      ref={eyeRef}
       className="signup-eye-ball"
+      data-max-distance={maxDistance}
       style={{
         width: `${size}px`,
         height: isBlinking ? "2px" : `${size}px`,
@@ -2330,6 +2298,7 @@ function EyeBall({
       {!isBlinking && (
         <div
           className="signup-pupil"
+          data-force-look={forceLookX !== undefined && forceLookY !== undefined ? "true" : undefined}
           style={{
             width: `${pupilSize}px`,
             height: `${pupilSize}px`,
@@ -2342,27 +2311,142 @@ function EyeBall({
   );
 }
 
+function updateSignupPupils(root, clientX, clientY) {
+  if (!root) return;
+
+  root.querySelectorAll(".signup-pupil").forEach((pupil) => {
+    if (pupil.dataset.forceLook === "true") return;
+    const trackingBox = pupil.closest(".signup-eye-ball") || pupil.parentElement;
+    if (!trackingBox) return;
+
+    const rect = trackingBox.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const deltaX = clientX - centerX;
+    const deltaY = clientY - centerY;
+    const maxDistance = Number(pupil.dataset.maxDistance || trackingBox.dataset.maxDistance || 5);
+    const distance = Math.min(Math.hypot(deltaX, deltaY), maxDistance);
+    const angle = Math.atan2(deltaY, deltaX);
+
+    pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+  });
+}
+
 function SignupCharacters({ password, showPassword, isTyping }) {
-  const [mouseX, setMouseX] = useState(0);
-  const [mouseY, setMouseY] = useState(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
   const [isBlackBlinking, setIsBlackBlinking] = useState(false);
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
   const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+  const stageRef = useRef(null);
   const purpleRef = useRef(null);
   const blackRef = useRef(null);
   const yellowRef = useRef(null);
   const orangeRef = useRef(null);
+  const purpleEyesRef = useRef(null);
+  const blackEyesRef = useRef(null);
+  const orangeEyesRef = useRef(null);
+  const yellowEyesRef = useRef(null);
+  const yellowMouthRef = useRef(null);
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef(0);
+  const passwordVisible = password.length > 0 && showPassword;
+  const passwordHidden = password.length > 0 && !showPassword;
 
   useEffect(() => {
-    const handleMouseMove = (event) => {
-      setMouseX(event.clientX);
-      setMouseY(event.clientY);
+    const getPosition = (ref, clientX, clientY) => {
+      if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
+
+      const rect = ref.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 3;
+      const deltaX = clientX - centerX;
+      const deltaY = clientY - centerY;
+
+      return {
+        faceX: Math.max(-15, Math.min(15, deltaX / 20)),
+        faceY: Math.max(-10, Math.min(10, deltaY / 30)),
+        bodySkew: Math.max(-6, Math.min(6, -deltaX / 120))
+      };
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+    const setEyes = (node, left, top) => {
+      if (!node) return;
+      node.style.left = `${left}px`;
+      node.style.top = `${top}px`;
+    };
+
+    const applyMotion = () => {
+      const { x, y } = pointerRef.current;
+      const purplePos = getPosition(purpleRef, x, y);
+      const blackPos = getPosition(blackRef, x, y);
+      const yellowPos = getPosition(yellowRef, x, y);
+      const orangePos = getPosition(orangeRef, x, y);
+
+      if (purpleRef.current) {
+        purpleRef.current.style.height = (isTyping || passwordHidden) ? "440px" : "400px";
+        purpleRef.current.style.transform = passwordVisible
+          ? "skewX(0deg)"
+          : (isTyping || passwordHidden)
+            ? `skewX(${(purplePos.bodySkew || 0) - 12}deg) translateX(40px)`
+            : `skewX(${purplePos.bodySkew || 0}deg)`;
+      }
+
+      if (blackRef.current) {
+        blackRef.current.style.transform = passwordVisible
+          ? "skewX(0deg)"
+          : isLookingAtEachOther
+            ? `skewX(${(blackPos.bodySkew || 0) * 1.5 + 10}deg) translateX(20px)`
+            : (isTyping || passwordHidden)
+              ? `skewX(${(blackPos.bodySkew || 0) * 1.5}deg)`
+              : `skewX(${blackPos.bodySkew || 0}deg)`;
+      }
+
+      if (orangeRef.current) {
+        orangeRef.current.style.transform = passwordVisible ? "skewX(0deg)" : `skewX(${orangePos.bodySkew || 0}deg)`;
+      }
+
+      if (yellowRef.current) {
+        yellowRef.current.style.transform = passwordVisible ? "skewX(0deg)" : `skewX(${yellowPos.bodySkew || 0}deg)`;
+      }
+
+      setEyes(purpleEyesRef.current, passwordVisible ? 20 : isLookingAtEachOther ? 55 : 45 + purplePos.faceX, passwordVisible ? 35 : isLookingAtEachOther ? 65 : 40 + purplePos.faceY);
+      setEyes(blackEyesRef.current, passwordVisible ? 10 : isLookingAtEachOther ? 32 : 26 + blackPos.faceX, passwordVisible ? 28 : isLookingAtEachOther ? 12 : 32 + blackPos.faceY);
+      setEyes(orangeEyesRef.current, passwordVisible ? 50 : 82 + orangePos.faceX, passwordVisible ? 85 : 90 + orangePos.faceY);
+      setEyes(yellowEyesRef.current, passwordVisible ? 20 : 52 + yellowPos.faceX, passwordVisible ? 35 : 40 + yellowPos.faceY);
+
+      if (yellowMouthRef.current) {
+        yellowMouthRef.current.style.left = `${passwordVisible ? 10 : 40 + yellowPos.faceX}px`;
+        yellowMouthRef.current.style.top = `${passwordVisible ? 88 : 88 + yellowPos.faceY}px`;
+      }
+
+      updateSignupPupils(stageRef.current, x, y);
+    };
+
+    const scheduleMotion = () => {
+      if (rafRef.current) return;
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = 0;
+        applyMotion();
+      });
+    };
+
+    if (!pointerRef.current.x && !pointerRef.current.y) {
+      pointerRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+
+    const handleMouseMove = (event) => {
+      pointerRef.current = { x: event.clientX, y: event.clientY };
+      scheduleMotion();
+    };
+
+    applyMotion();
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
+  }, [passwordVisible, passwordHidden, isTyping, isLookingAtEachOther, isPurplePeeking, isPurpleBlinking, isBlackBlinking]);
 
   useEffect(() => {
     const scheduleBlink = () => {
@@ -2423,48 +2507,22 @@ function SignupCharacters({ password, showPassword, isTyping }) {
     return () => window.clearTimeout(timer);
   }, [password, showPassword, isPurplePeeking]);
 
-  const calculatePosition = (ref) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
-
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 3;
-    const deltaX = mouseX - centerX;
-    const deltaY = mouseY - centerY;
-
-    return {
-      faceX: Math.max(-15, Math.min(15, deltaX / 20)),
-      faceY: Math.max(-10, Math.min(10, deltaY / 30)),
-      bodySkew: Math.max(-6, Math.min(6, -deltaX / 120))
-    };
-  };
-
-  const purplePos = calculatePosition(purpleRef);
-  const blackPos = calculatePosition(blackRef);
-  const yellowPos = calculatePosition(yellowRef);
-  const orangePos = calculatePosition(orangeRef);
-  const passwordVisible = password.length > 0 && showPassword;
-  const passwordHidden = password.length > 0 && !showPassword;
-
   return (
-    <div className="signup-character-stage">
+    <div ref={stageRef} className="signup-character-stage">
       <div
         ref={purpleRef}
         className="signup-character signup-purple"
         style={{
           height: (isTyping || passwordHidden) ? "440px" : "400px",
-          transform: passwordVisible
-            ? "skewX(0deg)"
-            : (isTyping || passwordHidden)
-              ? `skewX(${(purplePos.bodySkew || 0) - 12}deg) translateX(40px)`
-              : `skewX(${purplePos.bodySkew || 0}deg)`
+          transform: passwordVisible ? "skewX(0deg)" : (isTyping || passwordHidden) ? "skewX(-12deg) translateX(40px)" : "skewX(0deg)"
         }}
       >
         <div
+          ref={purpleEyesRef}
           className="signup-eyes signup-purple-eyes"
           style={{
-            left: passwordVisible ? "20px" : isLookingAtEachOther ? "55px" : `${45 + purplePos.faceX}px`,
-            top: passwordVisible ? "35px" : isLookingAtEachOther ? "65px" : `${40 + purplePos.faceY}px`
+            left: passwordVisible ? "20px" : isLookingAtEachOther ? "55px" : "45px",
+            top: passwordVisible ? "35px" : isLookingAtEachOther ? "65px" : "40px"
           }}
         >
           <EyeBall size={18} pupilSize={7} maxDistance={5} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isPurpleBlinking} forceLookX={passwordVisible ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined} forceLookY={passwordVisible ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined} />
@@ -2479,17 +2537,18 @@ function SignupCharacters({ password, showPassword, isTyping }) {
           transform: passwordVisible
             ? "skewX(0deg)"
             : isLookingAtEachOther
-              ? `skewX(${(blackPos.bodySkew || 0) * 1.5 + 10}deg) translateX(20px)`
+              ? "skewX(10deg) translateX(20px)"
               : (isTyping || passwordHidden)
-                ? `skewX(${(blackPos.bodySkew || 0) * 1.5}deg)`
-                : `skewX(${blackPos.bodySkew || 0}deg)`
+                ? "skewX(0deg)"
+                : "skewX(0deg)"
         }}
       >
         <div
+          ref={blackEyesRef}
           className="signup-eyes signup-black-eyes"
           style={{
-            left: passwordVisible ? "10px" : isLookingAtEachOther ? "32px" : `${26 + blackPos.faceX}px`,
-            top: passwordVisible ? "28px" : isLookingAtEachOther ? "12px" : `${32 + blackPos.faceY}px`
+            left: passwordVisible ? "10px" : isLookingAtEachOther ? "32px" : "26px",
+            top: passwordVisible ? "28px" : isLookingAtEachOther ? "12px" : "32px"
           }}
         >
           <EyeBall size={16} pupilSize={6} maxDistance={4} eyeColor="white" pupilColor="#2D2D2D" isBlinking={isBlackBlinking} forceLookX={passwordVisible ? -4 : isLookingAtEachOther ? 0 : undefined} forceLookY={passwordVisible ? -4 : isLookingAtEachOther ? -4 : undefined} />
@@ -2500,13 +2559,14 @@ function SignupCharacters({ password, showPassword, isTyping }) {
       <div
         ref={orangeRef}
         className="signup-character signup-orange"
-        style={{ transform: passwordVisible ? "skewX(0deg)" : `skewX(${orangePos.bodySkew || 0}deg)` }}
+        style={{ transform: "skewX(0deg)" }}
       >
         <div
+          ref={orangeEyesRef}
           className="signup-eyes signup-orange-eyes"
           style={{
-            left: passwordVisible ? "50px" : `${82 + orangePos.faceX}px`,
-            top: passwordVisible ? "85px" : `${90 + orangePos.faceY}px`
+            left: passwordVisible ? "50px" : "82px",
+            top: passwordVisible ? "85px" : "90px"
           }}
         >
           <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
@@ -2517,23 +2577,25 @@ function SignupCharacters({ password, showPassword, isTyping }) {
       <div
         ref={yellowRef}
         className="signup-character signup-yellow"
-        style={{ transform: passwordVisible ? "skewX(0deg)" : `skewX(${yellowPos.bodySkew || 0}deg)` }}
+        style={{ transform: "skewX(0deg)" }}
       >
         <div
+          ref={yellowEyesRef}
           className="signup-eyes signup-yellow-eyes"
           style={{
-            left: passwordVisible ? "20px" : `${52 + yellowPos.faceX}px`,
-            top: passwordVisible ? "35px" : `${40 + yellowPos.faceY}px`
+            left: passwordVisible ? "20px" : "52px",
+            top: passwordVisible ? "35px" : "40px"
           }}
         >
           <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
           <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={passwordVisible ? -5 : undefined} forceLookY={passwordVisible ? -4 : undefined} />
         </div>
         <div
+          ref={yellowMouthRef}
           className="signup-yellow-mouth"
           style={{
-            left: passwordVisible ? "10px" : `${40 + yellowPos.faceX}px`,
-            top: passwordVisible ? "88px" : `${88 + yellowPos.faceY}px`
+            left: passwordVisible ? "10px" : "40px",
+            top: "88px"
           }}
         />
       </div>
@@ -2548,8 +2610,7 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [activeAuthField, setActiveAuthField] = useState(null);
+  const isTyping = studentName.length > 0 || email.length > 0 || password.length > 0;
   const isLogin = authMode === "login";
 
   const handleSubmit = async (event) => {
@@ -2567,35 +2628,10 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
   const switchMode = (mode) => {
     setAuthMode(mode);
     setShowPassword(false);
-    setIsTyping(false);
-    setActiveAuthField(null);
   };
-
-  const gooStyle = (field, type) => (
-    activeAuthField === field
-      ? {
-          opacity: 1,
-          transform: type === "main" ? "translateY(-50%) scale(1.05)" : "scale(1)"
-        }
-      : undefined
-  );
 
   return (
     <section className="signup-screen">
-      <svg className="auth-gooey-filter" aria-hidden="true">
-        <defs>
-          <filter id="auth-input-goo" x="-40%" y="-80%" width="180%" height="260%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-            <feColorMatrix
-              in="blur"
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
-              result="goo"
-            />
-            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-          </filter>
-        </defs>
-      </svg>
       <div className="auth-terminal-bg" aria-hidden="true">
         <React.Suspense fallback={<span className="auth-terminal-fallback" />}>
           <FaultyTerminal
@@ -2641,6 +2677,7 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
             </Button>
 
             <div className="auth-mode-tabs" aria-label="Choose account action">
+              <div className={`auth-mode-tabs-slider ${isLogin ? "is-login" : "is-signup"}`} />
               <button type="button" className={!isLogin ? "active" : ""} onClick={() => switchMode("signup")}>Sign up</button>
               <button type="button" className={isLogin ? "active" : ""} onClick={() => switchMode("login")}>Login</button>
             </div>
@@ -2659,8 +2696,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
               <label className="signup-field">
                 <span>Student name</span>
                 <div className="signup-glass-input">
-                  <span className="auth-input-goo auth-input-goo-main" style={gooStyle("name", "main")} aria-hidden="true" />
-                  <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("name", "orb")} aria-hidden="true" />
                   <Users size={18} />
                   <input
                     required
@@ -2668,14 +2703,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                     placeholder="Your name"
                     value={studentName}
                     onChange={(event) => setStudentName(event.target.value)}
-                    onFocus={() => {
-                      setIsTyping(true);
-                      setActiveAuthField("name");
-                    }}
-                    onBlur={() => {
-                      setIsTyping(false);
-                      setActiveAuthField(null);
-                    }}
                   />
                 </div>
               </label>
@@ -2684,8 +2711,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
             <label className="signup-field">
               <span>Email</span>
               <div className="signup-glass-input">
-                <span className="auth-input-goo auth-input-goo-main" style={gooStyle("email", "main")} aria-hidden="true" />
-                <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("email", "orb")} aria-hidden="true" />
                 <Mail size={18} />
                 <input
                   required
@@ -2694,14 +2719,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                   value={email}
                   autoComplete="off"
                   onChange={(event) => setEmail(event.target.value)}
-                  onFocus={() => {
-                    setIsTyping(true);
-                    setActiveAuthField("email");
-                  }}
-                  onBlur={() => {
-                    setIsTyping(false);
-                    setActiveAuthField(null);
-                  }}
                 />
               </div>
             </label>
@@ -2709,8 +2726,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
             <label className="signup-field">
               <span>Password</span>
               <div className="signup-glass-input signup-password-wrap">
-                <span className="auth-input-goo auth-input-goo-main" style={gooStyle("password", "main")} aria-hidden="true" />
-                <span className="auth-input-goo auth-input-goo-orb" style={gooStyle("password", "orb")} aria-hidden="true" />
                 <Lock size={18} />
                 <input
                   required
@@ -2718,14 +2733,6 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  onFocus={() => {
-                    setIsTyping(true);
-                    setActiveAuthField("password");
-                  }}
-                  onBlur={() => {
-                    setIsTyping(false);
-                    setActiveAuthField(null);
-                  }}
                 />
                 <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((current) => !current)}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}

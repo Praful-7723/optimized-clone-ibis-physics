@@ -1,5 +1,5 @@
 import { Renderer, Program, Mesh, Color, Triangle } from "ogl";
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback, memo } from "react";
 import "./FaultyTerminal.css";
 
 const vertexShader = `
@@ -184,7 +184,7 @@ function hexToRgb(hex) {
   return [((number >> 16) & 255) / 255, ((number >> 8) & 255) / 255, (number & 255) / 255];
 }
 
-export default function FaultyTerminal({
+function FaultyTerminal({
   scale = 1,
   gridMul = [2, 1],
   digitSize = 1.5,
@@ -218,6 +218,8 @@ export default function FaultyTerminal({
   const timeOffsetRef = useRef(Math.random() * 100);
   const tintVec = useMemo(() => hexToRgb(tint), [tint]);
   const ditherValue = useMemo(() => (typeof dither === "boolean" ? (dither ? 1 : 0) : dither), [dither]);
+  const gridMulKey = (gridMul || [2, 1]).join(",");
+  const stableGridMul = useMemo(() => new Float32Array(gridMul || [2, 1]), [gridMulKey]);
 
   const handleMouseMove = useCallback((event) => {
     const container = containerRef.current;
@@ -249,7 +251,7 @@ export default function FaultyTerminal({
         iTime: { value: 0 },
         iResolution: { value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height) },
         uScale: { value: scale },
-        uGridMul: { value: new Float32Array(gridMul) },
+        uGridMul: { value: stableGridMul },
         uDigitSize: { value: digitSize },
         uScanlineIntensity: { value: scanlineIntensity },
         uGlitchAmount: { value: glitchAmount },
@@ -366,7 +368,7 @@ export default function FaultyTerminal({
     pause,
     timeScale,
     scale,
-    gridMul,
+    stableGridMul,
     digitSize,
     scanlineIntensity,
     glitchAmount,
@@ -386,3 +388,5 @@ export default function FaultyTerminal({
 
   return <div ref={containerRef} className={`faulty-terminal-container ${className}`} style={style} {...rest} />;
 }
+
+export default memo(FaultyTerminal);
