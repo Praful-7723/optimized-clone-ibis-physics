@@ -205,6 +205,8 @@ main {
   border-radius: 10px;
 }
 
+
+
 .brand:has(small) .brand-logo {
   width: clamp(296px, 25.2vw, 414px);
   height: 128px;
@@ -2394,7 +2396,7 @@ textarea {
   margin: 10px 10px 10px 0;
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 31px;
-  padding: clamp(24px, 3vw, 44px) clamp(34px, 3.6vw, 54px);
+  padding: clamp(20px, 4.5vh, 32px) clamp(34px, 3.6vw, 54px);
   background:
     radial-gradient(circle at 72% 16%, rgba(255, 255, 255, 0.7), transparent 27%),
     radial-gradient(circle at 18% 86%, rgba(184, 92, 63, 0.2), transparent 34%),
@@ -2444,14 +2446,8 @@ textarea {
 }
 
 .signup-back-btn {
-  width: 34px;
-  min-height: 34px;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.48);
   color: rgba(32, 22, 17, 0.82);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 10px 22px rgba(32, 22, 17, 0.1);
+  justify-self: start;
 }
 
 .auth-mode-tabs {
@@ -2528,7 +2524,7 @@ textarea {
   display: grid;
   justify-items: start;
   gap: 8px;
-  padding-top: 40px;
+  padding-top: clamp(24px, 5vh, 40px);
 }
 
 .auth-kicker {
@@ -2853,15 +2849,6 @@ textarea {
 
 .legal-back-btn {
   color: var(--legal-ink);
-  min-height: 36px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.54);
-  border-color: rgba(62, 39, 28, 0.1);
-  padding: 0 13px;
-  font-size: 0.78rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.76),
-    0 12px 28px rgba(65, 39, 28, 0.08);
 }
 
 .legal-actions {
@@ -3082,10 +3069,7 @@ textarea {
 }
 
 .pricing-back {
-  background: rgba(255, 248, 236, 0.9);
   color: var(--ink);
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 18px 46px rgba(30, 14, 10, 0.18);
 }
 
 .pricing-brand-mark {
@@ -7550,7 +7534,7 @@ main,
 
 /* Embedded Widescreen Emulation Container */
 .embedded-content-frame {
-  width: 1280px;
+  width: 100%;
   height: 100%;
   overflow: hidden;
   position: relative;
@@ -7597,6 +7581,24 @@ body:has(.embedded-content-frame) {
   margin: 0;
   max-width: 540px;
   display: inline-block;
+}
+
+/* Scoped Overrides for Mobile/Tablet landscape viewport scaling inside iframe */
+.embedded-content-frame .brand.compact .brand-logo {
+  width: clamp(160px, 15vw, 220px) !important;
+  height: 64px !important;
+}
+
+.embedded-content-frame .why-ibis-text-content {
+  padding: clamp(110px, 16vh, 140px) 32px 44px 24px !important;
+}
+
+.embedded-content-frame .why-ibis-story-copy {
+  font-size: clamp(1.4rem, 2.2vw, 1.95rem) !important;
+}
+
+.embedded-content-frame .why-ibis-title-heading {
+  font-size: clamp(1.8rem, 2.8vw, 2.5rem) !important;
 }
 
 

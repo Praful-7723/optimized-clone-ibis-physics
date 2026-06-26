@@ -172,6 +172,7 @@ const isMobileOrTablet = typeof navigator !== "undefined" && (
 
 function ScaleRotateWrapper({ children, needsScale, isPortrait, isEmbedded }) {
   const [scale, setScale] = useState(1);
+  const [width, setWidth] = useState(1280);
   const [height, setHeight] = useState(720);
   const [forceRotate, setForceRotate] = useState(false);
 
@@ -181,10 +182,10 @@ function ScaleRotateWrapper({ children, needsScale, isPortrait, isEmbedded }) {
     const handleResize = () => {
       const W = window.innerWidth;
       const H = window.innerHeight;
-      const designW = 1280;
 
       if (isPortrait && !forceRotate) {
         setScale(1);
+        setWidth(1280);
         setHeight(720);
         return;
       }
@@ -192,12 +193,17 @@ function ScaleRotateWrapper({ children, needsScale, isPortrait, isEmbedded }) {
       const availW = (isPortrait && forceRotate) ? H : W;
       const availH = (isPortrait && forceRotate) ? W : H;
 
-      // Scale based strictly on width to fill the screen width 100% on mobile/tablets
-      const newScale = (isMobileOrTablet || isPortrait) ? (availW / designW) : Math.min(availW / designW, 1);
+      const scaleW = availW / 1280;
+      const scaleH = availH / 720;
+
+      // Scale to fit the display completely without clipping heights on mobile/tablets
+      const newScale = (isMobileOrTablet || isPortrait) ? Math.min(scaleW, scaleH) : Math.min(scaleW, 1);
       setScale(newScale);
 
-      // Calculate dynamic height to match the device aspect ratio exactly, avoiding letterboxing
+      // Dynamic width and height to match viewport ratios
+      const calculatedWidth = availW / newScale;
       const calculatedHeight = availH / newScale;
+      setWidth(calculatedWidth);
       setHeight(calculatedHeight);
     };
 
@@ -248,7 +254,7 @@ function ScaleRotateWrapper({ children, needsScale, isPortrait, isEmbedded }) {
     position: "absolute",
     top: "50%",
     left: "50%",
-    width: "1280px",
+    width: `${width}px`,
     height: `${height}px`,
     transform: `translate(-50%, -50%) ${isPortrait && forceRotate ? "rotate(90deg)" : ""} scale(${scale})`,
     transformOrigin: "center center",
@@ -1741,7 +1747,7 @@ function ChapterView({ chapter, access, topicIndex, setTopicIndex, tab, setTab, 
   return (
     <section className="learning-shell">
       <header className="chapter-top">
-        <Button className="icon-btn" aria-label="Back" onClick={onBack}><ArrowLeft size={18} /></Button>
+        <GlassButton type="button" size="icon" onClick={onBack}><ArrowLeft size={18} /></GlassButton>
         <ChapterImage chapter={chapter} className="tiny-cover" />
         <strong>{chapter.name}</strong>
         <Pill tone={access === "full" ? "accent" : "warning"}>{access === "full" ? "full access" : "free topics only"}</Pill>
@@ -2328,7 +2334,7 @@ function BatchControl({ onBack }) {
   return (
     <section className="batch-shell">
       <header className="topbar">
-        <Button className="icon-btn" aria-label="Back" onClick={onBack}><ArrowLeft size={18} /></Button>
+        <GlassButton type="button" size="icon" onClick={onBack}><ArrowLeft size={18} /></GlassButton>
         <strong>Batch & Student Control</strong>
       </header>
       <div className="batch-grid">
@@ -2816,9 +2822,9 @@ function Signup({ onBack, onPay, onLogin, onLegal }) {
 
         <div className="signup-form-panel">
           <form className="signup-form-card" onSubmit={handleSubmit}>
-            <Button type="button" className="icon-btn signup-back-btn" aria-label="Back" onClick={onBack}>
+            <GlassButton type="button" size="icon" className="signup-back-btn" aria-label="Back" onClick={onBack}>
               <ArrowLeft size={18} />
-            </Button>
+            </GlassButton>
 
             <div className="auth-mode-tabs" aria-label="Choose account action">
               <div className={`auth-mode-tabs-slider ${isLogin ? "is-login" : "is-signup"}`} />
@@ -2951,10 +2957,9 @@ function LegalInfoPage({ page, onBack }) {
     <section className={`legal-screen legal-${activePage}`}>
       <div className="legal-layout">
         <header className="legal-topbar">
-          <Button type="button" className="legal-back-btn" aria-label="Back to signup" onClick={onBack}>
+          <GlassButton type="button" size="icon" className="legal-back-btn" aria-label="Back to signup" onClick={onBack}>
             <ArrowLeft size={18} />
-            <span>Back to signup</span>
-          </Button>
+          </GlassButton>
           <Brand compact />
           <nav className="legal-actions" aria-label="Legal sections">
             <button type="button" className={activePage === "privacy" ? "active" : ""} onClick={() => setActivePage("privacy")}>Privacy</button>
@@ -3111,13 +3116,15 @@ function Checkout({ onBack }) {
     <section className="checkout-flow">
       {/* Top Bar Navigation & Logo */}
       <div className="checkout-top-bar">
-        <Button 
-          className="icon-btn pricing-back" 
+        <GlassButton 
+          type="button" 
+          size="icon" 
+          className="pricing-back" 
           aria-label="Back" 
           onClick={onBack}
         >
           <ArrowLeft size={18} />
-        </Button>
+        </GlassButton>
         <Brand compact />
       </div>
 
